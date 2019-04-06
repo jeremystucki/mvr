@@ -1,0 +1,7 @@
+[package]
+name = "rmv"
+version = "0.1.0"
+authors = ["Jeremy Stucki <jeremy@myelin.ch>"]
+edition = "2018"
+
+[dependencies]
