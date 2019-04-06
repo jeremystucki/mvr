@@ -1,7 +1,7 @@
 use clap::{App, Arg, crate_version};
 
 fn main() {
-    let matches = App::new("rmv")
+    let matches = App::new("mvr")
         .author("Jeremy Stucki")
         .version(crate_version!())
         .about("Rename batches of files")
