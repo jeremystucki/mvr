@@ -5,3 +5,4 @@ authors = ["Jeremy Stucki <jeremy@myelin.ch>"]
 edition = "2018"
 
 [dependencies]
+clap = "2.33"
