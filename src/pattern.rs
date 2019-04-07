@@ -5,6 +5,9 @@ use std::fmt::Display;
 const WILDCARD_TOKEN: char = '*';
 const FIXED_LENGTH_TOKEN: char = '?';
 
+const CAPTURE_GROUP_START_TOKEN: char = '(';
+const CAPTURE_GROUP_END_TOKEN: char = ')';
+
 #[derive(Debug)]
 enum Token {
     Text(String),
@@ -70,32 +73,52 @@ struct SearchPatternImpl {
 
 impl SearchPatternImpl {
     fn try_new(pattern: &str) -> Result<Self, PatternError> {
-        let mut chars = pattern.chars();
+        let result = Self {
+            elements: get_search_pattern_elements(&pattern)?,
+        };
 
-        let element = chars
-            .position('(')
-            .map(|p| p + 1)
-            .map(|start_of_capture_group| {
-                let end_of_capture_group = chars
-                    .position(')')
-                    .ok_or_else(|| PatternError::InvalidSyntax)?;
+        dbg!(&result);
 
-                SearchPatternElement {
-                    tokens: get_tokens(&pattern[start_of_capture_group..end_of_capture_group])?,
-                    is_matching_group: true,
-                };
+        Ok(result)
+    }
+}
+
+fn get_search_pattern_elements(pattern: &str) -> Result<Vec<SearchPatternElement>, PatternError> {
+    let mut chars = pattern.chars();
+
+    Ok(match chars.position(|c| c == CAPTURE_GROUP_START_TOKEN) {
+        None => vec![SearchPatternElement {
+            tokens: get_tokens(pattern)?,
+            is_matching_group: false,
+        }],
+        Some(start_of_capture_group) => {
+            let end_of_capture_group = chars
+                .position(|c| c == CAPTURE_GROUP_END_TOKEN)
+                .map(|position| position + start_of_capture_group + 1)
+                .ok_or_else(|| PatternError::InvalidSyntax)?;
+
+            let mut elements = Vec::new();
+
+            if start_of_capture_group != 0 {
+                elements.append(&mut get_search_pattern_elements(
+                    &pattern[..start_of_capture_group],
+                )?);
+            }
+
+            elements.push(SearchPatternElement {
+                tokens: get_tokens(&pattern[start_of_capture_group + 1..end_of_capture_group])?,
+                is_matching_group: true,
             });
 
-        let elements = get_search_pattern_elements(pattern)?
-            .into_iter()
-            .map(|element| SearchPatternElement {
-                tokens: vec![element],
-                is_matching_group: false,
-            })
-            .collect();
+            if end_of_capture_group != pattern.len() {
+                elements.append(&mut get_search_pattern_elements(
+                    &pattern[end_of_capture_group + 1..],
+                )?);
+            }
 
-        Ok(Self { elements })
-    }
+            elements
+        }
+    })
 }
 
 fn get_tokens(pattern: &str) -> Result<Vec<Token>, PatternError> {
@@ -115,7 +138,7 @@ fn get_tokens(pattern: &str) -> Result<Vec<Token>, PatternError> {
     let mut tokens = vec![token];
 
     if pattern.len() != end_of_token {
-        tokens.append(&mut get_search_pattern_elements(&pattern[end_of_token..])?);
+        tokens.append(&mut get_tokens(&pattern[end_of_token..])?);
     }
 
     Ok(tokens)
@@ -124,12 +147,17 @@ fn get_tokens(pattern: &str) -> Result<Vec<Token>, PatternError> {
 fn find_end_of_token(pattern: &str) -> usize {
     let mut chars = pattern.chars();
 
-    match chars.next() {
-        WILDCARD_TOKEN => Some(1),
-        FIXED_LENGTH_TOKEN => chars.position(|c| c != FIXED_LENGTH_TOKEN),
-        _ => chars.position(|c| c == WILDCARD_TOKEN || c == FIXED_LENGTH_TOKEN),
-    }
-    .unwrap_or(pattern.len())
+    chars
+        .next()
+        .map(|c| {
+            match c {
+                WILDCARD_TOKEN => Some(1),
+                FIXED_LENGTH_TOKEN => chars.position(|c| c != FIXED_LENGTH_TOKEN),
+                _ => chars.position(|c| c == WILDCARD_TOKEN || c == FIXED_LENGTH_TOKEN),
+            }
+            .unwrap_or(pattern.len())
+        })
+        .unwrap_or(pattern.len())
 }
 
 impl SearchPattern for SearchPatternImpl {
