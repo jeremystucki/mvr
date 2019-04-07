@@ -1,12 +1,14 @@
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
-use std::num::NonZeroUsize;
+
+const WILDCARD_TOKEN: char = '*';
+const FIXED_LENGTH_TOKEN: char = '?';
 
 #[derive(Debug)]
 enum Token {
     Text(String),
-    FixedLength(NonZeroUsize),
+    FixedLength(usize),
     Wildcard,
 }
 
@@ -68,40 +70,44 @@ struct SearchPatternImpl {
 
 impl SearchPatternImpl {
     fn try_new(pattern: &str) -> Result<Self, PatternError> {
-        unimplemented!()
+        let elements = get_search_pattern_elements(pattern)?
+            .into_iter()
+            .map(|element| SearchPatternElement {
+                tokens: vec![element],
+                is_matching_group: false,
+            })
+            .collect();
+
+        Ok(Self { elements })
     }
 }
 
 fn get_search_pattern_elements(pattern: &str) -> Result<Vec<Token>, PatternError> {
-    let mut chars = pattern.chars();
-
-    let first_character = chars
+    let first_character = pattern
+        .chars()
         .next()
-        .into_result()
-        .map_err(PatternError::EmptyPattern)?;
+        .ok_or_else(|| PatternError::EmptyPattern)?;
 
-    let tokens = match first_character {
-        '*' => vec![Token::Wildcard].append(&mut get_search_pattern_elements(&pattern[1..])?),
-        '?' => {
-            let end_of_fixed_length_token = chars.position(|character| character != '?');
+    let end_of_token = match first_character {
+        WILDCARD_TOKEN => Some(1),
+        FIXED_LENGTH_TOKEN => pattern.chars().position(|c| c != FIXED_LENGTH_TOKEN),
+        _ => pattern
+            .chars()
+            .position(|c| c == WILDCARD_TOKEN || c == FIXED_LENGTH_TOKEN),
+    }
+    .unwrap_or(pattern.len());
 
-            match end_of_fixed_length_token {
-                None => vec![Token::FixedLength(pattern.len())],
-                Some(position) => vec![Token::FixedLength(position)]
-                    .append(&mut get_search_pattern_elements(&pattern[position..])?),
-            }
-        }
-        _ => {
-            let end_of_text_token =
-                chars.position(|character| character == '?' || character == '*');
-
-            match end_of_text_token {
-                None => vec![Token::Text(first_character.to_string())],
-                Some(position) => vec![Token::Text(pattern[..position].to_string())]
-                    .append(&mut get_search_pattern_elements(&pattern[position..])?),
-            }
-        }
+    let token = match first_character {
+        WILDCARD_TOKEN => Token::Wildcard,
+        FIXED_LENGTH_TOKEN => Token::FixedLength(end_of_token),
+        _ => Token::Text(pattern[..end_of_token].to_string()),
     };
+
+    let mut tokens = vec![token];
+
+    if pattern.len() != end_of_token {
+        tokens.append(&mut get_search_pattern_elements(&pattern[end_of_token..])?);
+    }
 
     Ok(tokens)
 }
