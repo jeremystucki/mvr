@@ -88,14 +88,7 @@ fn get_search_pattern_elements(pattern: &str) -> Result<Vec<Token>, PatternError
         .next()
         .ok_or_else(|| PatternError::EmptyPattern)?;
 
-    let end_of_token = match first_character {
-        WILDCARD_TOKEN => Some(1),
-        FIXED_LENGTH_TOKEN => pattern.chars().position(|c| c != FIXED_LENGTH_TOKEN),
-        _ => pattern
-            .chars()
-            .position(|c| c == WILDCARD_TOKEN || c == FIXED_LENGTH_TOKEN),
-    }
-    .unwrap_or(pattern.len());
+    let end_of_token = find_end_of_token(pattern);
 
     let token = match first_character {
         WILDCARD_TOKEN => Token::Wildcard,
@@ -110,6 +103,17 @@ fn get_search_pattern_elements(pattern: &str) -> Result<Vec<Token>, PatternError
     }
 
     Ok(tokens)
+}
+
+fn find_end_of_token(pattern: &str) -> usize {
+    let mut chars = pattern.chars();
+
+    match chars.next() {
+        WILDCARD_TOKEN => Some(1),
+        FIXED_LENGTH_TOKEN => chars.position(|c| c != FIXED_LENGTH_TOKEN),
+        _ => chars.position(|c| c == WILDCARD_TOKEN || c == FIXED_LENGTH_TOKEN),
+    }
+    .unwrap_or(pattern.len())
 }
 
 impl SearchPattern for SearchPatternImpl {
