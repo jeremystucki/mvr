@@ -70,6 +70,22 @@ struct SearchPatternImpl {
 
 impl SearchPatternImpl {
     fn try_new(pattern: &str) -> Result<Self, PatternError> {
+        let mut chars = pattern.chars();
+
+        let element = chars
+            .position('(')
+            .map(|p| p + 1)
+            .map(|start_of_capture_group| {
+                let end_of_capture_group = chars
+                    .position(')')
+                    .ok_or_else(|| PatternError::InvalidSyntax)?;
+
+                SearchPatternElement {
+                    tokens: get_tokens(&pattern[start_of_capture_group..end_of_capture_group])?,
+                    is_matching_group: true,
+                };
+            });
+
         let elements = get_search_pattern_elements(pattern)?
             .into_iter()
             .map(|element| SearchPatternElement {
@@ -82,7 +98,7 @@ impl SearchPatternImpl {
     }
 }
 
-fn get_search_pattern_elements(pattern: &str) -> Result<Vec<Token>, PatternError> {
+fn get_tokens(pattern: &str) -> Result<Vec<Token>, PatternError> {
     let first_character = pattern
         .chars()
         .next()
