@@ -1,5 +1,7 @@
 use clap::{crate_version, App, Arg};
 
+mod pattern;
+
 const OLD_PATTERN_PARAMETER_NAME: &str = "old pattern";
 const NEW_PATTERN_PARAMETER_NAME: &str = "new pattern";
 
