@@ -1,6 +1,9 @@
+use nom::types::CompleteStr;
+use nom::IResult;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::num::NonZeroUsize;
+use std::process::Command;
 
 #[derive(Debug, PartialEq)]
 enum Token {
@@ -51,6 +54,15 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
+        named!(group<CompleteStr, CompleteStr>, delimited!(char!('('), take!(2), char!(')')));
+        named!(parse_input<CompleteStr, Vec<CompleteStr>>, many1!(group));
+
+        let result = parse_input(CompleteStr("(cd)"));
+
+        let (_, output) = result.unwrap();
+
+        println!("{}", *output.get(0).unwrap());
+
         unimplemented!()
     }
 }
