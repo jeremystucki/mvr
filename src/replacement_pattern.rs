@@ -9,7 +9,7 @@ enum Token {
 }
 
 #[derive(Debug)]
-struct ReplacementPattern {
+pub struct ReplacementPattern {
     elements: Vec<Token>,
 }
 
@@ -37,7 +37,7 @@ trait ReplacementPatternParser {
 struct ReplacementPatternParserImpl {}
 
 impl ReplacementPatternParser for ReplacementPatternParserImpl {
-    fn parse(&self, input: &str) -> Result<ReplacementPattern, ParsingError> {
+    fn parse(&self, _input: &str) -> Result<ReplacementPattern, ParsingError> {
         unimplemented!()
     }
 }

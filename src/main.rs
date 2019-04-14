@@ -11,7 +11,7 @@ const OLD_PATTERN_PARAMETER_NAME: &str = "old pattern";
 const NEW_PATTERN_PARAMETER_NAME: &str = "new pattern";
 
 fn main() {
-    let matches = App::new("mvr")
+    let _matches = App::new("mvr")
         .author("Jeremy Stucki")
         .version(crate_version!())
         .about("Rename batches of files")
