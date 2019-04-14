@@ -113,7 +113,7 @@ mod tests {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo"))),
                 Element::Token(Token::Wildcard),
-                Element::Token(Token::Text(String::from("bar"))),
+                Element::Token(Token::Text(String::from(".bar"))),
             ],
         };
 
@@ -128,7 +128,7 @@ mod tests {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo"))),
                 Element::Group(vec![Token::Wildcard]),
-                Element::Token(Token::Text(String::from("bar"))),
+                Element::Token(Token::Text(String::from(".bar"))),
             ],
         };
 
