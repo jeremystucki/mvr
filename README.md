@@ -17,7 +17,7 @@ ARGS:
     <old pattern>    Use braces to indicate groups
                      Use question marks to match a single character
                      Use asterisks to match any amount of characters
-    <new pattern>    Use $n to insert a matched group (0-based)
+    <new pattern>    Use $n to insert a matched group (1-based)
 ```
 
 ## Example
@@ -30,7 +30,7 @@ Input:
 ```
 
 Command:  
-`mvr '*_(??).(*)' '$0.$1'`
+`mvr '*_(??).(*)' '$1.$2'`
 
 Output:  
 ```
