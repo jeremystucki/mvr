@@ -1,9 +1,7 @@
 use nom::types::CompleteStr;
-use nom::IResult;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::num::NonZeroUsize;
-use std::process::Command;
 
 #[derive(Debug, PartialEq)]
 enum Token {
@@ -74,18 +72,34 @@ impl Parser for ParserImpl {
             |complete_string| Token::Text(complete_string.to_string())
         ));
 
-        named!(parse_input<CompleteStr, Vec<Token>>,
-        many1!(
-            alt!(wildcard | fixed_length | text)
+        named!(token<CompleteStr, Token>,
+        alt!(wildcard | fixed_length | text));
+
+        named!(group<CompleteStr, Element>,
+        delimited!(
+            char!('('),
+            map!(
+                many1!(token), |tokens| Element::Group(tokens)),
+            char!(')')
         ));
 
-        let result = parse_input(CompleteStr(input));
+        named!(elements<CompleteStr, Vec<Element>>,
+        many1!(
+            alt!(
+                group | map!(token, |token| Element::Token(token))
+            )
+        ));
 
-        let (_, output) = result.unwrap();
-
-        output.iter().for_each(|token| println!("{:?}", token));
-
-        unimplemented!()
+        match elements(CompleteStr(input)) {
+            Err(_) => Err(ParsingError::InvalidSyntax),
+            Ok((remaining_text, elements)) => {
+                if remaining_text.len() > 0 {
+                    Err(ParsingError::InvalidSyntax)
+                } else {
+                    Ok(Pattern { elements })
+                }
+            }
+        }
     }
 }
 
