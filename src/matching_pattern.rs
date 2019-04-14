@@ -42,11 +42,12 @@ trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
+#[derive(Debug, Default)]
 struct ParserImpl {}
 
 impl ParserImpl {
     fn new() -> Self {
-        Self {}
+        ParserImpl::default()
     }
 }
 
@@ -79,14 +80,14 @@ impl Parser for ParserImpl {
         delimited!(
             char!('('),
             map!(
-                many1!(token), |tokens| Element::Group(tokens)),
+                many1!(token), Element::Group),
             char!(')')
         ));
 
         named!(elements<CompleteStr, Vec<Element>>,
         many1!(
             alt!(
-                group | map!(token, |token| Element::Token(token))
+                group | map!(token, Element::Token)
             )
         ));
 
