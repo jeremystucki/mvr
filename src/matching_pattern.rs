@@ -111,20 +111,28 @@ impl Parser for ParserImpl {
 }
 
 fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
-    let mut tokens: Vec<_> = pattern
+    pattern
         .elements
         .iter()
         .flat_map(|element| match element {
             Element::Token(token) => vec![token],
             Element::Group(tokens) => tokens.iter().collect(), // TODO
         })
-        .collect();
-
-    let number_of_tokens = tokens.len();
-
-    tokens.dedup();
-
-    number_of_tokens != tokens.len()
+        .scan(false, |previous_token_was_wildcard, token| match token {
+            Token::Wildcard => {
+                if *previous_token_was_wildcard {
+                    Some(())
+                } else {
+                    *previous_token_was_wildcard = true;
+                    None
+                }
+            }
+            _ => {
+                *previous_token_was_wildcard = false;
+                None
+            }
+        })
+        .any(Option::is_some)
 }
 
 #[cfg(test)]
