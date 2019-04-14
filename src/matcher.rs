@@ -1,10 +1,10 @@
 #[derive(Debug)]
-pub struct CaptureGroup {
+struct CaptureGroup {
     contents: String,
 }
 
-pub trait Matcher {
+trait Matcher {
     fn match_against(&self, input: &str) -> Option<Vec<CaptureGroup>>;
 }
 
-pub struct MatcherImpl {}
+struct MatcherImpl {}
