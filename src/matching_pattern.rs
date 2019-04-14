@@ -143,7 +143,7 @@ mod tests {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo_"))),
                 Element::Token(Token::FixedLength(NonZeroUsize::new(2).unwrap())),
-                Element::Token(Token::Text(String::from("bar"))),
+                Element::Token(Token::Text(String::from(".bar"))),
             ],
         };
 
