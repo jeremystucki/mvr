@@ -17,7 +17,7 @@ enum Element {
 }
 
 #[derive(Debug, PartialEq)]
-struct Pattern {
+pub struct Pattern {
     elements: Vec<Element>,
 }
 
