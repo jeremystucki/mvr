@@ -1,3 +1,4 @@
+use nom::types::CompleteStr;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::num::NonZeroUsize;
@@ -44,7 +45,38 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
-        unimplemented!()
+        named!(text<CompleteStr, Token>,
+        map!(
+            take_while1!(
+                |character| character != '$'),
+            |complete_string| Token::Text(complete_string.to_string())
+        ));
+
+        named!(capture_group<CompleteStr, Token>,
+        preceded!(
+            char!('$'),
+            map!(
+                u32!(nom::Endianness::Big), // TODO: Look at the Endianness
+                |index| Token::CaptureGroup(NonZeroUsize::new(index as usize).expect("Capture group indices start at 1")))
+        ));
+
+        named!(elements<CompleteStr, Vec<Token>>,
+        many1!(
+            alt!(
+                capture_group | text
+            )
+        ));
+
+        match elements(CompleteStr(input)) {
+            Err(_) => Err(ParsingError::InvalidSyntax),
+            Ok((remaining_text, elements)) => {
+                if remaining_text.len() > 0 {
+                    Err(ParsingError::InvalidSyntax)
+                } else {
+                    Ok(Pattern { elements })
+                }
+            }
+        }
     }
 }
 
