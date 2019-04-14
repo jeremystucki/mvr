@@ -1,4 +1,7 @@
 # mvr
+[![Build Status](https://travis-ci.org/jeremystucki/mvr.svg?branch=master)](https://travis-ci.org/jeremystucki/mvr)
+[![dependency status](https://deps.rs/repo/github/jeremystucki/mvr/status.svg)](https://deps.rs/repo/github/jeremystucki/mvr)
+
 A replacement for [zsh's zmv](http://zsh.sourceforge.net/Doc/Release/User-Contributions.html#index-zmv).
 
 ## Usage
