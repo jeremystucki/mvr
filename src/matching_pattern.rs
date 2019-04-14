@@ -42,11 +42,12 @@ trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
+#[derive(Debug, Default)]
 struct ParserImpl {}
 
 impl ParserImpl {
     fn new() -> Self {
-        Self {}
+        ParserImpl::default()
     }
 }
 
