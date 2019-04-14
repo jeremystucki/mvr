@@ -4,8 +4,12 @@ matrix:
   include:
     - rust: stable
     - rust: beta
-    - rust: nightly
+    - rust: nightly-2019-04-14
 
 script:
   - cargo build --all-features --verbose
   - cargo test --all-features --verbose
+  - cargo clippy
+  - cargo clippy -- -Dwarnings
+  - cargo clippy --tests -- -Dwarnings
+  - cargo fmt --all -- --check
