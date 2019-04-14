@@ -103,10 +103,10 @@ impl Parser for ParserImpl {
         };
 
         if contains_repeated_wildcards(&pattern) {
-            Err(ParsingError::InvalidSyntax)
-        } else {
-            Ok(pattern)
+            Err(ParsingError::InvalidSyntax)?
         }
+
+        Ok(pattern)
     }
 }
 
