@@ -79,14 +79,14 @@ impl Parser for ParserImpl {
         delimited!(
             char!('('),
             map!(
-                many1!(token), |tokens| Element::Group(tokens)),
+                many1!(token), Element::Group),
             char!(')')
         ));
 
         named!(elements<CompleteStr, Vec<Element>>,
         many1!(
             alt!(
-                group | map!(token, |token| Element::Token(token))
+                group | map!(token, Element::Token)
             )
         ));
 
