@@ -91,17 +91,40 @@ impl Parser for ParserImpl {
             )
         ));
 
-        match elements(CompleteStr(input)) {
-            Err(_) => Err(ParsingError::InvalidSyntax),
+        let pattern = match elements(CompleteStr(input)) {
+            Err(_) => Err(ParsingError::InvalidSyntax)?,
             Ok((remaining_text, elements)) => {
                 if remaining_text.len() > 0 {
-                    Err(ParsingError::InvalidSyntax)
+                    Err(ParsingError::InvalidSyntax)?
                 } else {
-                    Ok(Pattern { elements })
+                    Pattern { elements }
                 }
             }
+        };
+
+        if contains_repeated_wildcards(&pattern) {
+            Err(ParsingError::InvalidSyntax)
+        } else {
+            Ok(pattern)
         }
     }
+}
+
+fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
+    let mut tokens: Vec<_> = pattern
+        .elements
+        .iter()
+        .flat_map(|element| match element {
+            Element::Token(token) => vec![token],
+            Element::Group(tokens) => tokens.iter().collect(), // TODO
+        })
+        .collect();
+
+    let number_of_tokens = tokens.len();
+
+    tokens.dedup();
+
+    number_of_tokens != tokens.len()
 }
 
 #[cfg(test)]
@@ -187,6 +210,51 @@ mod tests {
         let expected = ParsingError::InvalidSyntax;
 
         let actual = ParserImpl::new().parse("foo_(??.*").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_1() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_*(*).bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_2() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_**.bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_3() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*)*.bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_4() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*)(*).bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_5() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(**).bar").unwrap_err();
 
         assert_eq!(expected, actual);
     }
