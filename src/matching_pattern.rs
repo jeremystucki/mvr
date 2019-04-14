@@ -121,18 +121,18 @@ fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
         .scan(false, |previous_token_was_wildcard, token| match token {
             Token::Wildcard => {
                 if *previous_token_was_wildcard {
-                    Some(())
+                    Some(true)
                 } else {
                     *previous_token_was_wildcard = true;
-                    None
+                    Some(false)
                 }
             }
             _ => {
                 *previous_token_was_wildcard = false;
-                None
+                Some(false)
             }
         })
-        .any(Option::is_some)
+        .any(|is_repeated_wildcard| is_repeated_wildcard)
 }
 
 #[cfg(test)]
