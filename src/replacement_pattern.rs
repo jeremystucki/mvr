@@ -1,3 +1,4 @@
+use nom::digit;
 use nom::types::CompleteStr;
 use std::error::Error;
 use std::fmt::{self, Display};
@@ -56,8 +57,9 @@ impl Parser for ParserImpl {
         preceded!(
             char!('$'),
             map!(
-                u32!(nom::Endianness::Big), // TODO: Look at the Endianness
-                |index| Token::CaptureGroup(NonZeroUsize::new(index as usize).expect("Capture group indices start at 1")))
+                digit, // TODO: Look at the Endianness
+                |index| Token::CaptureGroup(
+                    NonZeroUsize::new(index.parse().unwrap()).expect("Capture group indices start at 1"))) // TODO: Find a way to do this without panicking
         ));
 
         named!(elements<CompleteStr, Vec<Token>>,
@@ -107,12 +109,9 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn parse_fails_with_0_group() {
-        let expected = ParsingError::InvalidSyntax;
-
-        let actual = ParserImpl::new().parse("foo-$0.bar").unwrap_err();
-
-        assert_eq!(expected, actual);
+        let _ = ParserImpl::new().parse("foo-$0.bar").unwrap_err();
     }
 
     #[test]
