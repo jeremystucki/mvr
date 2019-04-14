@@ -4,25 +4,25 @@ use std::fmt::{self, Display};
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
-enum Token {
+pub enum Token {
     Text(String),
     FixedLength(NonZeroUsize),
     Wildcard,
 }
 
 #[derive(Debug, PartialEq)]
-enum Element {
+pub enum Element {
     Token(Token),
     Group(Vec<Token>),
 }
 
 #[derive(Debug, PartialEq)]
-struct Pattern {
-    elements: Vec<Element>,
+pub struct Pattern {
+    pub elements: Vec<Element>,
 }
 
 #[derive(Debug, PartialEq)]
-enum ParsingError {
+pub enum ParsingError {
     InvalidSyntax,
 }
 
@@ -38,12 +38,12 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-trait Parser {
+pub trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
 #[derive(Debug, Default)]
-struct ParserImpl {}
+pub struct ParserImpl {}
 
 impl ParserImpl {
     fn new() -> Self {
