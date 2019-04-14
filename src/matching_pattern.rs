@@ -54,14 +54,36 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
-        named!(group<CompleteStr, CompleteStr>, delimited!(char!('('), take!(2), char!(')')));
-        named!(parse_input<CompleteStr, Vec<CompleteStr>>, many1!(group));
+        named!(wildcard<CompleteStr, Token>,
+        value!(
+            Token::Wildcard,
+            char!('*')
+        ));
 
-        let result = parse_input(CompleteStr("(cd)"));
+        named!(fixed_length<CompleteStr, Token>,
+        map!(
+            take_while1!(
+                |character| character == '?'),
+            |string| Token::FixedLength(NonZeroUsize::new(string.len()).unwrap())
+        ));
+
+        named!(text<CompleteStr, Token>,
+        map!(
+            take_while1!(
+                |c| !(c == '*' || c == '?' || c == '(' || c == ')')),
+            |complete_string| Token::Text(complete_string.to_string())
+        ));
+
+        named!(parse_input<CompleteStr, Vec<Token>>,
+        many1!(
+            alt!(wildcard | fixed_length | text)
+        ));
+
+        let result = parse_input(CompleteStr(input));
 
         let (_, output) = result.unwrap();
 
-        println!("{}", *output.get(0).unwrap());
+        output.iter().for_each(|token| println!("{:?}", token));
 
         unimplemented!()
     }
