@@ -2,15 +2,15 @@ use crate::matching_pattern::*;
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
-struct CaptureGroup {
-    contents: String,
+pub struct CaptureGroup {
+    pub contents: String,
 }
 
-trait Matcher {
+pub trait Matcher {
     fn match_against(&self, input: &str) -> Option<Vec<CaptureGroup>>;
 }
 
-struct MatcherImpl {
+pub struct MatcherImpl {
     pattern: Pattern,
 }
 
