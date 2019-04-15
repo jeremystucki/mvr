@@ -121,6 +121,10 @@ fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
             Element::Token(token) => Either::Left(iter::once(token)),
             Element::Group(tokens) => Either::Right(tokens.iter()),
         })
+        .filter(|token| match token {
+            Token::FixedLength(_) => false,
+            _ => true,
+        })
         .tuple_windows()
         .any(|(first_value, second_value)| {
             *first_value == Token::Wildcard && *second_value == Token::Wildcard
