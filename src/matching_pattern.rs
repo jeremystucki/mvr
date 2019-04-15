@@ -1,6 +1,9 @@
+use either::Either;
+use itertools::Itertools;
 use nom::types::CompleteStr;
 use std::error::Error;
 use std::fmt::{self, Display};
+use std::iter;
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
@@ -115,24 +118,13 @@ fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
         .elements
         .iter()
         .flat_map(|element| match element {
-            Element::Token(token) => vec![token],
-            Element::Group(tokens) => tokens.iter().collect(), // TODO
+            Element::Token(token) => Either::Left(iter::once(token)),
+            Element::Group(tokens) => Either::Right(tokens.iter()),
         })
-        .scan(false, |previous_token_was_wildcard, token| match token {
-            Token::Wildcard => {
-                if *previous_token_was_wildcard {
-                    Some(true)
-                } else {
-                    *previous_token_was_wildcard = true;
-                    Some(false)
-                }
-            }
-            _ => {
-                *previous_token_was_wildcard = false;
-                Some(false)
-            }
+        .tuple_windows()
+        .any(|(first_value, second_value)| {
+            *first_value == Token::Wildcard && *second_value == Token::Wildcard
         })
-        .any(|is_repeated_wildcard| is_repeated_wildcard)
 }
 
 #[cfg(test)]
