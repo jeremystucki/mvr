@@ -1,6 +1,9 @@
+use either::Either;
+use itertools::Itertools;
 use nom::types::CompleteStr;
 use std::error::Error;
 use std::fmt::{self, Display};
+use std::iter;
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
@@ -111,20 +114,21 @@ impl Parser for ParserImpl {
 }
 
 fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
-    let mut tokens: Vec<_> = pattern
+    pattern
         .elements
         .iter()
         .flat_map(|element| match element {
-            Element::Token(token) => vec![token],
-            Element::Group(tokens) => tokens.iter().collect(), // TODO
+            Element::Token(token) => Either::Left(iter::once(token)),
+            Element::Group(tokens) => Either::Right(tokens.iter()),
         })
-        .collect();
-
-    let number_of_tokens = tokens.len();
-
-    tokens.dedup();
-
-    number_of_tokens != tokens.len()
+        .filter(|token| match token {
+            Token::FixedLength(_) => false,
+            _ => true,
+        })
+        .tuple_windows()
+        .any(|(first_value, second_value)| {
+            *first_value == Token::Wildcard && *second_value == Token::Wildcard
+        })
 }
 
 #[cfg(test)]
@@ -255,6 +259,33 @@ mod tests {
         let expected = ParsingError::InvalidSyntax;
 
         let actual = ParserImpl::new().parse("foo_(**).bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_6() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*??*).bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_7() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*??)*.bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_8() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_*??*.bar").unwrap_err();
 
         assert_eq!(expected, actual);
     }
