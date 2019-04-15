@@ -258,4 +258,31 @@ mod tests {
 
         assert_eq!(expected, actual);
     }
+
+    #[test]
+    fn fails_with_repeated_wildcards_6() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*??*).bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_7() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_(*??)*.bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn fails_with_repeated_wildcards_8() {
+        let expected = ParsingError::InvalidSyntax;
+
+        let actual = ParserImpl::new().parse("foo_*??*.bar").unwrap_err();
+
+        assert_eq!(expected, actual);
+    }
 }
