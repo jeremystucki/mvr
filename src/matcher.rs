@@ -259,4 +259,3 @@ mod tests {
         assert_eq!(expected, actual)
     }
 }
->>>>>>> master

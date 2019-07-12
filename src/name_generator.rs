@@ -1,19 +1,19 @@
 use crate::matcher::CaptureGroup;
-use crate::replacement_pattern::Pattern;
+use crate::replacement_pattern::{Element, Pattern};
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
 enum NameGeneratorError {
-    MissingCaptureGroups(Vec<usize>),
+    MissingCaptureGroup(usize),
 }
 
 impl Display for NameGeneratorError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
-            NameGeneratorError::MissingCaptureGroups(capture_groups) => {
-                format!("Missing capture groups: {:?}", capture_groups)
+            NameGeneratorError::MissingCaptureGroup(capture_group) => {
+                format!("Missing capture group: {:?}", capture_group)
             }
         };
 
@@ -47,7 +47,17 @@ impl NameGenerator for NameGeneratorImpl {
         &self,
         capture_groups: Vec<CaptureGroup>,
     ) -> Result<String, NameGeneratorError> {
-        unimplemented!()
+        self.replacement_pattern
+            .elements
+            .iter()
+            .map(|token| match token {
+                Element::Text(text) => Ok(text.clone()),
+                Element::CaptureGroup(index) => capture_groups
+                    .get(*index)
+                    .map(|capture_group| capture_group.contents.clone())
+                    .ok_or(NameGeneratorError::MissingCaptureGroup(*index)),
+            })
+            .collect()
     }
 }
 
@@ -55,12 +65,12 @@ impl NameGenerator for NameGeneratorImpl {
 mod tests {
     use super::*;
     use crate::matcher::CaptureGroup;
-    use crate::replacement_pattern::Token;
+    use crate::replacement_pattern::Element;
 
     #[test]
     fn works_with_text_only_pattern() {
         let pattern = Pattern {
-            elements: vec![Token::Text(String::from("foo"))],
+            elements: vec![Element::Text(String::from("foo"))],
         };
 
         let name_generator = NameGeneratorImpl::new(pattern);
@@ -72,14 +82,14 @@ mod tests {
     #[test]
     fn fails_with_missing_capture_group() {
         let pattern = Pattern {
-            elements: vec![Token::CaptureGroup(2), Token::Text(String::from("foo"))],
+            elements: vec![Element::CaptureGroup(2), Element::Text(String::from("foo"))],
         };
 
         let name_generator = NameGeneratorImpl::new(pattern);
         let name = name_generator.generate_name(vec![]);
 
         assert_eq!(
-            NameGeneratorError::MissingCaptureGroups(vec![2]),
+            NameGeneratorError::MissingCaptureGroup(2),
             name.unwrap_err()
         );
     }
@@ -87,7 +97,7 @@ mod tests {
     #[test]
     fn works_with_single_capture_group() {
         let pattern = Pattern {
-            elements: vec![Token::CaptureGroup(1), Token::Text(String::from("foo"))],
+            elements: vec![Element::CaptureGroup(1), Element::Text(String::from("foo"))],
         };
 
         let name_generator = NameGeneratorImpl::new(pattern);
@@ -110,9 +120,9 @@ mod tests {
     fn works_with_multiple_capture_groups() {
         let pattern = Pattern {
             elements: vec![
-                Token::CaptureGroup(0),
-                Token::Text(String::from("foo")),
-                Token::CaptureGroup(1),
+                Element::CaptureGroup(0),
+                Element::Text(String::from("foo")),
+                Element::CaptureGroup(1),
             ],
         };
 
@@ -135,7 +145,7 @@ mod tests {
     #[test]
     fn works_with_capture_group_only() {
         let pattern = Pattern {
-            elements: vec![Token::CaptureGroup(0)],
+            elements: vec![Element::CaptureGroup(0)],
         };
 
         let name_generator = NameGeneratorImpl::new(pattern);
