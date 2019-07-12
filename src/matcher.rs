@@ -81,7 +81,7 @@ fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()
     }
 }
 
-fn consume_text_token(text: &String, input: &str) -> Result<usize, ()> {
+fn consume_text_token(text: &str, input: &str) -> Result<usize, ()> {
     if input.starts_with(text) {
         Ok(text.len())
     } else {
