@@ -8,14 +8,14 @@ use std::error::Error;
 use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq)]
-enum Token {
+pub enum Token {
     Text(String),
     CaptureGroup(usize),
 }
 
 #[derive(Debug, PartialEq)]
-struct Pattern {
-    elements: Vec<Token>,
+pub struct Pattern {
+    pub elements: Vec<Token>,
 }
 
 #[derive(Debug, PartialEq)]
