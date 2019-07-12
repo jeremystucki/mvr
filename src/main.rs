@@ -25,7 +25,7 @@ fn main() {
         .arg(
             Arg::with_name(NEW_PATTERN_PARAMETER_NAME)
                 .required(true)
-                .help("Use $n to insert a matched group (1-based)"),
+                .help("Use $n to insert a matched group (0-based)"),
         )
         .get_matches();
 }
