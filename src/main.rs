@@ -1,8 +1,5 @@
 use clap::{crate_version, App, Arg};
 
-#[macro_use]
-extern crate nom;
-
 mod matcher;
 mod matching_pattern;
 mod replacement_pattern;

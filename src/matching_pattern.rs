@@ -1,25 +1,30 @@
 use either::Either;
 use itertools::Itertools;
-use nom::types::CompleteStr;
+use nom::branch::alt;
+use nom::bytes::complete::take_while1;
+use nom::character::complete::char as nom_char;
+use nom::combinator::{map, value};
+use nom::multi::many1;
+use nom::sequence::delimited;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::iter;
 use std::num::NonZeroUsize;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Token {
     Text(String),
     FixedLength(NonZeroUsize),
     Wildcard,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Element {
     Token(Token),
     Group(Vec<Token>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Pattern {
     elements: Vec<Element>,
 }
@@ -56,53 +61,30 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
-        named!(wildcard<CompleteStr, Token>,
-        value!(
-            Token::Wildcard,
-            char!('*')
-        ));
+        let wildcard = value(Token::Wildcard, nom_char::<_, ()>('*'));
 
-        named!(fixed_length<CompleteStr, Token>,
-        map!(
-            take_while1!(
-                |character| character == '?'),
-            |string| Token::FixedLength(NonZeroUsize::new(string.len()).unwrap())
-        ));
+        let fixed_length = map(take_while1(|c| c == '?'), |input: &str| {
+            Token::FixedLength(NonZeroUsize::new(input.len()).unwrap())
+        });
 
-        named!(text<CompleteStr, Token>,
-        map!(
-            take_while1!(
-                |c| !(c == '*' || c == '?' || c == '(' || c == ')')),
-            |complete_string| Token::Text(complete_string.to_string())
-        ));
+        let text = map(
+            take_while1(|c| !(c == '*' || c == '?' || c == '(' || c == ')')),
+            |input: &str| Token::Text(String::from(input)),
+        );
 
-        named!(token<CompleteStr, Token>,
-        alt!(wildcard | fixed_length | text));
+        let token = alt((wildcard, fixed_length, text));
 
-        named!(group<CompleteStr, Element>,
-        delimited!(
-            char!('('),
-            map!(
-                many1!(token), Element::Group),
-            char!(')')
-        ));
+        let group = delimited(
+            nom_char('('),
+            map(many1(&token), Element::Group),
+            nom_char(')'),
+        );
 
-        named!(elements<CompleteStr, Vec<Element>>,
-        many1!(
-            alt!(
-                group | map!(token, Element::Token)
-            )
-        ));
+        let elements = many1(alt((group, map(&token, Element::Token))));
 
-        let pattern = match elements(CompleteStr(input)) {
-            Err(_) => Err(ParsingError::InvalidSyntax)?,
-            Ok((remaining_text, elements)) => {
-                if remaining_text.len() > 0 {
-                    Err(ParsingError::InvalidSyntax)?
-                } else {
-                    Pattern { elements }
-                }
-            }
+        let pattern = match elements(input).map_err(|_| ParsingError::InvalidSyntax)? {
+            (remaining_text, _) if !remaining_text.is_empty() => Err(ParsingError::InvalidSyntax)?,
+            (_, elements) => Pattern { elements },
         };
 
         if contains_repeated_wildcards(&pattern) {
