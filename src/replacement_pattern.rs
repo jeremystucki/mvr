@@ -49,7 +49,7 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
-        let text = map(take_while1::<_, _, ()>(|c| c != '$'), |input: &str| {
+        let text = map(take_while1::<_, _, ()>(|c| c != '$'), |input| {
             Token::Text(String::from(input))
         });
 
