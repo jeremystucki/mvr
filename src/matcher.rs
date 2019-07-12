@@ -103,18 +103,18 @@ fn consume_wildcard_token(input: &str, tail: &[&Token]) -> Result<usize, ()> {
     match tail.get(0) {
         None => Ok(input.len()),
         Some(Token::Text(text)) => input.find(text).ok_or(()),
-        Some(Token::FixedLength(length)) => match tail.get(1) {
-            None => Ok(input.len() - length.get()),
-            Some(Token::Text(text)) => {
-                let length = length.get();
-                input[length..]
+        Some(Token::FixedLength(length)) => {
+            let length = length.get();
+            match tail.get(1) {
+                None => Ok(input.len() - length),
+                Some(Token::Text(text)) => input[length..]
                     .find(text)
                     .map(|position| position - length)
-                    .ok_or(())
+                    .ok_or(()),
+                Some(_) => unreachable!(),
             }
-            Some(_) => panic!("Reached an invalid state"),
-        },
-        Some(_) => panic!("Reached an invalid state"),
+        }
+        Some(_) => unreachable!(),
     }
 }
 
