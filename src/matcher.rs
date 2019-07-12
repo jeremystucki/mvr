@@ -7,7 +7,7 @@ pub struct CaptureGroup {
 }
 
 pub trait Matcher {
-    fn match_against(&self, input: &str) -> Option<Vec<CaptureGroup>>;
+    fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()>;
 }
 
 pub struct MatcherImpl {
@@ -21,8 +21,34 @@ impl MatcherImpl {
 }
 
 impl Matcher for MatcherImpl {
-    fn match_against(&self, input: &str) -> Option<Vec<CaptureGroup>> {
+    fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()> {
         unimplemented!()
+    }
+}
+
+fn consume_token(input: &str, head: &Token, tail: &[Token]) -> Result<usize, ()> {
+    match head {
+        Token::Text(text) => consume_text_token(text, input),
+        Token::FixedLength(length) => consume_fixed_length_token(*length, input),
+        Token::Wildcard => unimplemented!(),
+    }
+}
+
+fn consume_text_token(text: &String, input: &str) -> Result<usize, ()> {
+    if input.starts_with(text) {
+        Ok(text.len())
+    } else {
+        Err(())
+    }
+}
+
+fn consume_fixed_length_token(length: NonZeroUsize, input: &str) -> Result<usize, ()> {
+    let length = length.get();
+
+    if input.len() >= length {
+        Ok(length)
+    } else {
+        Err(())
     }
 }
 
@@ -32,7 +58,7 @@ mod tests {
 
     #[test]
     fn parse_without_group_with_exact_match() {
-        let expected = Some(vec![]);
+        let expected = Ok(vec![]);
 
         let pattern = Pattern {
             elements: vec![Element::Token(Token::Text(String::from("foo")))],
@@ -47,7 +73,7 @@ mod tests {
 
     #[test]
     fn parse_without_group_without_exact_match() {
-        let expected = None;
+        let expected = Err(());
 
         let pattern = Pattern {
             elements: vec![Element::Token(Token::Text(String::from("foo")))],
@@ -62,7 +88,7 @@ mod tests {
 
     #[test]
     fn parse_with_fixed_length() {
-        let expected = Some(vec![]);
+        let expected = Ok(vec![]);
 
         let pattern = Pattern {
             elements: vec![
@@ -80,7 +106,7 @@ mod tests {
 
     #[test]
     fn parse_with_fixed_length_inside_group() {
-        let expected = Some(vec![CaptureGroup {
+        let expected = Ok(vec![CaptureGroup {
             contents: String::from("oo"),
         }]);
 
@@ -100,7 +126,7 @@ mod tests {
 
     #[test]
     fn parse_with_wildcard() {
-        let expected = Some(vec![]);
+        let expected = Ok(vec![]);
 
         let pattern = Pattern {
             elements: vec![
@@ -119,7 +145,7 @@ mod tests {
 
     #[test]
     fn parse_with_wildcard_inside_group() {
-        let expected = Some(vec![CaptureGroup {
+        let expected = Ok(vec![CaptureGroup {
             contents: String::from("oo"),
         }]);
 
@@ -140,7 +166,7 @@ mod tests {
 
     #[test]
     fn parse_with_multiple_groups() {
-        let expected = Some(vec![
+        let expected = Ok(vec![
             CaptureGroup {
                 contents: String::from("oo"),
             },
