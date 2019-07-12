@@ -44,19 +44,19 @@ impl Matcher for MatcherImpl {
             .map(|(token, _)| *token)
             .collect();
 
-        let mut current_index = 0;
+        let mut current_token_index = 0;
         let mut current_position = 0;
         let mut lengths = Vec::with_capacity(tokens.len());
-        while current_index < tokens.len() {
+        while current_token_index < tokens.len() {
             let length = consume_token(
                 &input[current_position..],
-                tokens[current_index],
-                &tokens.get(current_index + 1..).unwrap_or(&[]),
+                tokens[current_token_index],
+                &tokens.get(current_token_index + 1..).unwrap_or(&[]),
             )?;
 
-            lengths.push(length);
+            current_token_index += 1;
             current_position += length;
-            current_index += 1;
+            lengths.push(length);
         }
 
         if current_position != input.len() {
@@ -64,7 +64,7 @@ impl Matcher for MatcherImpl {
         }
 
         let positions_and_lengths = lengths.iter().scan(0 as usize, |position, length| {
-            let own_position = position.clone();
+            let own_position = *position;
             *position += *length;
             Some((own_position, *length))
         });
@@ -84,7 +84,7 @@ fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()
     match head {
         Token::Text(text) => consume_text_token(text, input),
         Token::FixedLength(length) => consume_fixed_length_token(*length, input),
-        Token::Wildcard => unimplemented!(),
+        Token::Wildcard => consume_wildcard_token(input, tail),
     }
 }
 
@@ -103,6 +103,15 @@ fn consume_fixed_length_token(length: NonZeroUsize, input: &str) -> Result<usize
         Ok(length)
     } else {
         Err(())
+    }
+}
+
+fn consume_wildcard_token(input: &str, tail: &[&Token]) -> Result<usize, ()> {
+    match tail.get(0) {
+        None => Ok(input.len()),
+        Some(Token::Text(text)) => unimplemented!(),
+        Some(Token::FixedLength(length)) => unimplemented!(),
+        Some(Token::Wildcard) => panic!("Reached an invalid state"),
     }
 }
 
