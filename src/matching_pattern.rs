@@ -12,25 +12,25 @@ use std::iter;
 use std::num::NonZeroUsize;
 
 #[derive(Clone, Debug, PartialEq)]
-enum Token {
+pub enum Token {
     Text(String),
     FixedLength(NonZeroUsize),
     Wildcard,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Element {
+pub enum Element {
     Token(Token),
     Group(Vec<Token>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pattern {
-    elements: Vec<Element>,
+    pub elements: Vec<Element>,
 }
 
 #[derive(Debug, PartialEq)]
-enum ParsingError {
+pub enum ParsingError {
     InvalidSyntax,
 }
 
@@ -46,12 +46,12 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-trait Parser {
+pub trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
 #[derive(Debug, Default)]
-struct ParserImpl {}
+pub struct ParserImpl {}
 
 impl ParserImpl {
     fn new() -> Self {
@@ -118,7 +118,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_with_wildcard_pattern() {
+    fn wildcard_pattern() {
         let expected = Pattern {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo"))),
@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_wildcard_pattern_inside_capture_group() {
+    fn wildcard_pattern_inside_capture_group() {
         let expected = Pattern {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo"))),
@@ -148,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_fixed_length_pattern() {
+    fn fixed_length_pattern() {
         let expected = Pattern {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo_"))),
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_text_only() {
+    fn text_only() {
         let expected = Pattern {
             elements: vec![Element::Token(Token::Text(String::from("foo.bar")))],
         };
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_wildcard_and_fixed_length_token_in_capture_group() {
+    fn wildcard_and_fixed_length_token_in_capture_group() {
         let expected = Pattern {
             elements: vec![
                 Element::Token(Token::Text(String::from("foo_"))),
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_fails_with_mismatched_grouping() {
+    fn fails_with_mismatched_grouping() {
         let expected = ParsingError::InvalidSyntax;
 
         let actual = ParserImpl::new().parse("foo_(??.*").unwrap_err();
