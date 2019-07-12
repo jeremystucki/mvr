@@ -22,11 +22,65 @@ impl MatcherImpl {
 
 impl Matcher for MatcherImpl {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()> {
-        unimplemented!()
+        let tokens_to_capture_groups: Vec<(&Token, Option<usize>)> = {
+            let mut group_id: usize = 0;
+
+            self.pattern
+                .elements
+                .iter()
+                .flat_map(|element| match element {
+                    Element::Token(token) => vec![(token, None)],
+                    Element::Group(tokens) => {
+                        let tokens = tokens.iter().map(|token| (token, Some(group_id))).collect();
+                        group_id += 1;
+                        tokens
+                    }
+                })
+                .collect()
+        };
+
+        let tokens: Vec<&Token> = tokens_to_capture_groups
+            .iter()
+            .map(|(token, _)| *token)
+            .collect();
+
+        let mut current_index = 0;
+        let mut current_position = 0;
+        let mut lengths = Vec::with_capacity(tokens.len());
+        while current_index < tokens.len() {
+            let length = consume_token(
+                &input[current_position..],
+                tokens[current_index],
+                &tokens.get(current_index + 1..).unwrap_or(&[]),
+            )?;
+
+            lengths.push(length);
+            current_position += length;
+            current_index += 1;
+        }
+
+        if current_position != input.len() {
+            return Err(());
+        }
+
+        let positions_and_lengths = lengths.iter().scan(0 as usize, |position, length| {
+            let own_position = position.clone();
+            *position += *length;
+            Some((own_position, *length))
+        });
+
+        Ok(tokens_to_capture_groups
+            .iter()
+            .zip(positions_and_lengths)
+            .filter(|((_, capture_group), _)| capture_group.is_some())
+            .map(|((_, capture_group), (position, length))| CaptureGroup {
+                contents: String::from(&input[position..position + length]),
+            })
+            .collect())
     }
 }
 
-fn consume_token(input: &str, head: &Token, tail: &[Token]) -> Result<usize, ()> {
+fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()> {
     match head {
         Token::Text(text) => consume_text_token(text, input),
         Token::FixedLength(length) => consume_fixed_length_token(*length, input),
