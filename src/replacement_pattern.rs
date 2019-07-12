@@ -1,13 +1,16 @@
-use nom::digit;
-use nom::types::CompleteStr;
+use nom::branch::alt;
+use nom::bytes::complete::take_while1;
+use nom::character::complete::{char as nom_char, digit1};
+use nom::combinator::map;
+use nom::multi::many1;
+use nom::sequence::preceded;
 use std::error::Error;
 use std::fmt::{self, Display};
-use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
 enum Token {
     Text(String),
-    CaptureGroup(NonZeroUsize),
+    CaptureGroup(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -46,39 +49,25 @@ impl ParserImpl {
 
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
-        named!(text<CompleteStr, Token>,
-        map!(
-            take_while1!(
-                |character| character != '$'),
-            |complete_string| Token::Text(complete_string.to_string())
-        ));
+        let text = map(take_while1::<_, _, ()>(|c| c != '$'), |input| {
+            Token::Text(String::from(input))
+        });
 
-        named!(capture_group<CompleteStr, Token>,
-        preceded!(
-            char!('$'),
-            map!(
-                digit, // TODO: Look at the Endianness
-                |index| Token::CaptureGroup(
-                    NonZeroUsize::new(index.parse().unwrap()).expect("Capture group indices start at 1"))) // TODO: Find a way to do this without panicking
-        ));
+        let capture_group = preceded(
+            nom_char('$'),
+            map(digit1, |input: &str| {
+                Token::CaptureGroup(input.parse().unwrap())
+            }),
+        );
 
-        named!(elements<CompleteStr, Vec<Token>>,
-        many1!(
-            alt!(
-                capture_group | text
-            )
-        ));
+        let elements = many1(alt((capture_group, text)));
 
-        match elements(CompleteStr(input)) {
-            Err(_) => Err(ParsingError::InvalidSyntax),
-            Ok((remaining_text, elements)) => {
-                if remaining_text.len() > 0 {
-                    Err(ParsingError::InvalidSyntax)
-                } else {
-                    Ok(Pattern { elements })
-                }
-            }
-        }
+        let pattern = match elements(input).map_err(|_| ParsingError::InvalidSyntax)? {
+            (remaining_text, _) if !remaining_text.is_empty() => Err(ParsingError::InvalidSyntax)?,
+            (_, elements) => Pattern { elements },
+        };
+
+        Ok(pattern)
     }
 }
 
@@ -100,18 +89,12 @@ mod tests {
     #[test]
     fn parse_with_group_only() {
         let expected = Pattern {
-            elements: vec![Token::CaptureGroup(NonZeroUsize::new(1).unwrap())],
+            elements: vec![Token::CaptureGroup(0)],
         };
 
-        let actual = ParserImpl::new().parse("$1").unwrap();
+        let actual = ParserImpl::new().parse("$0").unwrap();
 
         assert_eq!(expected, actual);
-    }
-
-    #[test]
-    #[should_panic]
-    fn parse_fails_with_0_group() {
-        let _ = ParserImpl::new().parse("foo-$0.bar").unwrap_err();
     }
 
     #[test]
@@ -119,9 +102,9 @@ mod tests {
         let expected = Pattern {
             elements: vec![
                 Token::Text(String::from("foo-")),
-                Token::CaptureGroup(NonZeroUsize::new(1).unwrap()),
+                Token::CaptureGroup(1),
                 Token::Text(String::from(".")),
-                Token::CaptureGroup(NonZeroUsize::new(2).unwrap()),
+                Token::CaptureGroup(2),
             ],
         };
 
