@@ -22,7 +22,7 @@ impl MatcherImpl {
 
 impl Matcher for MatcherImpl {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()> {
-        let tokens_to_capture_groups: Vec<(&Token, bool)> = self
+        let tokens_to_capture_groups: Vec<_> = self
             .pattern
             .elements
             .iter()
@@ -32,25 +32,27 @@ impl Matcher for MatcherImpl {
             })
             .collect();
 
-        let tokens: Vec<&Token> = tokens_to_capture_groups
+        let tokens: Vec<_> = tokens_to_capture_groups
             .iter()
             .map(|(token, _)| *token)
             .collect();
 
-        let mut current_token_index = 0;
         let mut current_position = 0;
-        let mut lengths = Vec::with_capacity(tokens.len());
-        while current_token_index < tokens.len() {
-            let length = consume_token(
-                &input[current_position..],
-                tokens[current_token_index],
-                &tokens.get(current_token_index + 1..).unwrap_or(&[]),
-            )?;
+        let lengths = tokens
+            .iter()
+            .enumerate()
+            .map(|(token_index, token)| {
+                let length = consume_token(
+                    &input[current_position..],
+                    token,
+                    &tokens.get(token_index + 1..).unwrap_or(&[]),
+                )?;
 
-            current_token_index += 1;
-            current_position += length;
-            lengths.push(length);
-        }
+                current_position += length;
+
+                Ok(length)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         if current_position != input.len() {
             return Err(());
