@@ -113,7 +113,7 @@ mod tests {
             },
         ]);
 
-        assert_eq!(String::from("foobaz"), name.unwrap());
+        assert_eq!(String::from("barfoo"), name.unwrap());
     }
 
     #[test]
@@ -139,7 +139,7 @@ mod tests {
             },
         ]);
 
-        assert_eq!(String::from("foobar"), name.unwrap());
+        assert_eq!(String::from("foofoobar"), name.unwrap());
     }
 
     #[test]
