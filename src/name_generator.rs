@@ -55,7 +55,7 @@ impl NameGenerator for NameGeneratorImpl {
                 Element::CaptureGroup(index) => capture_groups
                     .get(*index)
                     .map(|capture_group| capture_group.contents.clone())
-                    .ok_or(NameGeneratorError::MissingCaptureGroup(*index)),
+                    .ok_or_else(|| NameGeneratorError::MissingCaptureGroup(*index)),
             })
             .collect()
     }
