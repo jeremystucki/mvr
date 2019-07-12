@@ -22,22 +22,15 @@ impl MatcherImpl {
 
 impl Matcher for MatcherImpl {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()> {
-        let tokens_to_capture_groups: Vec<(&Token, Option<usize>)> = {
-            let mut group_id: usize = 0;
-
-            self.pattern
-                .elements
-                .iter()
-                .flat_map(|element| match element {
-                    Element::Token(token) => vec![(token, None)],
-                    Element::Group(tokens) => {
-                        let tokens = tokens.iter().map(|token| (token, Some(group_id))).collect();
-                        group_id += 1;
-                        tokens
-                    }
-                })
-                .collect()
-        };
+        let tokens_to_capture_groups: Vec<(&Token, bool)> = self
+            .pattern
+            .elements
+            .iter()
+            .flat_map(|element| match element {
+                Element::Token(token) => vec![(token, false)],
+                Element::Group(tokens) => tokens.iter().map(|token| (token, true)).collect(),
+            })
+            .collect();
 
         let tokens: Vec<&Token> = tokens_to_capture_groups
             .iter()
@@ -72,8 +65,8 @@ impl Matcher for MatcherImpl {
         Ok(tokens_to_capture_groups
             .iter()
             .zip(positions_and_lengths)
-            .filter(|((_, capture_group), _)| capture_group.is_some())
-            .map(|((_, capture_group), (position, length))| CaptureGroup {
+            .filter(|((_, capture_group), _)| *capture_group)
+            .map(|((_, _), (position, length))| CaptureGroup {
                 contents: String::from(&input[position..position + length]),
             })
             .collect())
@@ -109,9 +102,19 @@ fn consume_fixed_length_token(length: NonZeroUsize, input: &str) -> Result<usize
 fn consume_wildcard_token(input: &str, tail: &[&Token]) -> Result<usize, ()> {
     match tail.get(0) {
         None => Ok(input.len()),
-        Some(Token::Text(text)) => unimplemented!(),
-        Some(Token::FixedLength(length)) => unimplemented!(),
-        Some(Token::Wildcard) => panic!("Reached an invalid state"),
+        Some(Token::Text(text)) => input.find(text).ok_or(()),
+        Some(Token::FixedLength(length)) => match tail.get(1) {
+            None => Ok(input.len() - length.get()),
+            Some(Token::Text(text)) => {
+                let length = length.get();
+                input[length..]
+                    .find(text)
+                    .map(|position| position - length)
+                    .ok_or(())
+            }
+            Some(_) => panic!("Reached an invalid state"),
+        },
+        Some(_) => panic!("Reached an invalid state"),
     }
 }
 
