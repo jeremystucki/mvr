@@ -12,25 +12,25 @@ use std::iter;
 use std::num::NonZeroUsize;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Token {
+pub(crate) enum Token {
     Text(String),
     FixedLength(NonZeroUsize),
     Wildcard,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Element {
+pub(crate) enum Element {
     Token(Token),
     Group(Vec<Token>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Pattern {
-    pub elements: Vec<Element>,
+pub(crate) struct Pattern {
+    pub(crate) elements: Vec<Element>,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ParsingError {
+pub(crate) enum ParsingError {
     InvalidSyntax,
 }
 
@@ -46,15 +46,15 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-pub trait Parser {
+pub(crate) trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
 #[derive(Debug, Default)]
-pub struct ParserImpl {}
+pub(crate) struct ParserImpl {}
 
 impl ParserImpl {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         ParserImpl::default()
     }
 }

@@ -8,18 +8,18 @@ use std::error::Error;
 use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq)]
-pub enum Element {
+pub(crate) enum Element {
     Text(String),
     CaptureGroup(usize),
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Pattern {
-    pub elements: Vec<Element>,
+pub(crate) struct Pattern {
+    pub(crate) elements: Vec<Element>,
 }
 
 #[derive(Debug, PartialEq)]
-enum ParsingError {
+pub(crate) enum ParsingError {
     InvalidSyntax,
 }
 
@@ -35,14 +35,14 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-trait Parser {
+pub(crate) trait Parser {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
-struct ParserImpl {}
+pub(crate) struct ParserImpl {}
 
 impl ParserImpl {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {}
     }
 }
