@@ -2,6 +2,7 @@ use clap::{crate_version, App, Arg};
 
 mod matcher;
 mod matching_pattern;
+mod name_generator;
 mod replacement_pattern;
 
 const OLD_PATTERN_PARAMETER_NAME: &str = "old pattern";

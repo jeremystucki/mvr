@@ -8,14 +8,14 @@ use std::error::Error;
 use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq)]
-enum Token {
+pub enum Element {
     Text(String),
     CaptureGroup(usize),
 }
 
 #[derive(Debug, PartialEq)]
-struct Pattern {
-    elements: Vec<Token>,
+pub struct Pattern {
+    pub elements: Vec<Element>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,13 +50,13 @@ impl ParserImpl {
 impl Parser for ParserImpl {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError> {
         let text = map(take_while1::<_, _, ()>(|c| c != '$'), |input| {
-            Token::Text(String::from(input))
+            Element::Text(String::from(input))
         });
 
         let capture_group = preceded(
             nom_char('$'),
             map(digit1, |input: &str| {
-                Token::CaptureGroup(input.parse().unwrap())
+                Element::CaptureGroup(input.parse().unwrap())
             }),
         );
 
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn parse_with_text_only() {
         let expected = Pattern {
-            elements: vec![Token::Text(String::from("foo.bar"))],
+            elements: vec![Element::Text(String::from("foo.bar"))],
         };
 
         let actual = ParserImpl::new().parse("foo.bar").unwrap();
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn parse_with_group_only() {
         let expected = Pattern {
-            elements: vec![Token::CaptureGroup(0)],
+            elements: vec![Element::CaptureGroup(0)],
         };
 
         let actual = ParserImpl::new().parse("$0").unwrap();
@@ -101,10 +101,10 @@ mod tests {
     fn parse_with_multiple_groups() {
         let expected = Pattern {
             elements: vec![
-                Token::Text(String::from("foo-")),
-                Token::CaptureGroup(1),
-                Token::Text(String::from(".")),
-                Token::CaptureGroup(2),
+                Element::Text(String::from("foo-")),
+                Element::CaptureGroup(1),
+                Element::Text(String::from(".")),
+                Element::CaptureGroup(2),
             ],
         };
 
