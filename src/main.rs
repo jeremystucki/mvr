@@ -55,7 +55,7 @@ fn parse_matching_pattern(string: &str) -> matching_pattern::Pattern {
     let parser = matching_pattern::ParserImpl::new();
     match parser.parse(string) {
         Ok(pattern) => pattern,
-        Err(_) => panic!("Invalid matching pattern"),
+        Err(matching_pattern::ParsingError::InvalidSyntax) => panic!("Invalid matching pattern"),
     }
 }
 
@@ -63,6 +63,8 @@ fn parse_replacement_pattern(string: &str) -> replacement_pattern::Pattern {
     let parser = replacement_pattern::ParserImpl::new();
     match parser.parse(string) {
         Ok(pattern) => pattern,
-        Err(_) => panic!("Invalid replacement pattern"),
+        Err(replacement_pattern::ParsingError::InvalidSyntax) => {
+            panic!("Invalid replacement pattern")
+        }
     }
 }
