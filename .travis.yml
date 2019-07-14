@@ -8,7 +8,6 @@ matrix:
 
 install:
   - rustup component add rustfmt clippy
-  - if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then cargo install -f cargo-tarpaulin; fi
 
 script:
   - cargo build --all-features --verbose
@@ -18,5 +17,10 @@ script:
   - cargo clippy --tests -- -Dwarnings
   - cargo fmt --all -- --check
 
-after_success:
-  - if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID; fi
+deploy:
+  provider: script
+  on:
+    branch: master
+  script: |
+    cargo install -f cargo-tarpaulin
+    cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
