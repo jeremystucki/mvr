@@ -5,7 +5,7 @@ use nom::combinator::map;
 use nom::multi::many1;
 use nom::sequence::preceded;
 use std::error::Error;
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Element {
@@ -35,10 +35,11 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-pub(crate) trait Parser {
+pub(crate) trait Parser: Debug {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
+#[derive(Debug)]
 pub(crate) struct ParserImpl {}
 
 impl ParserImpl {

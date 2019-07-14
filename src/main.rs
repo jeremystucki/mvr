@@ -1,16 +1,15 @@
-use crate::matcher::{Matcher, MatcherImpl};
+use crate::matcher::MatcherImpl;
 use crate::matching_pattern::Parser as MatchingPatternParser;
-use crate::name_generator::{NameGenerator, NameGeneratorImpl};
+use crate::name_generator::NameGeneratorImpl;
+use crate::renamer::{Renamer, RenamerImpl};
 use crate::replacement_pattern::Parser as ReplacementPatternParser;
 use clap::{crate_version, App, Arg};
 use std::env::current_dir;
-use std::fs::{read_dir, rename};
-use std::io;
-use std::path::PathBuf;
 
 mod matcher;
 mod matching_pattern;
 mod name_generator;
+mod renamer;
 mod replacement_pattern;
 
 const OLD_PATTERN_PARAMETER_NAME: &str = "old pattern";
@@ -46,15 +45,17 @@ fn main() {
     let matcher = MatcherImpl::new(matching_pattern);
     let name_generator = NameGeneratorImpl::new(replacement_pattern);
 
-    let directory = current_dir().unwrap();
-    rename_files(&directory, &matcher, &name_generator).unwrap();
+    let renamer = RenamerImpl::new(Box::new(matcher), Box::new(name_generator));
+
+    let directory = current_dir().expect("Cannot access directory");
+    renamer.rename_files_in_directory(directory).unwrap();
 }
 
 fn parse_matching_pattern(string: &str) -> matching_pattern::Pattern {
     let parser = matching_pattern::ParserImpl::new();
     match parser.parse(string) {
         Ok(pattern) => pattern,
-        Err(_) => unimplemented!(),
+        Err(_) => panic!("Invalid matching pattern"),
     }
 }
 
@@ -62,37 +63,6 @@ fn parse_replacement_pattern(string: &str) -> replacement_pattern::Pattern {
     let parser = replacement_pattern::ParserImpl::new();
     match parser.parse(string) {
         Ok(pattern) => pattern,
-        Err(_) => unimplemented!(),
+        Err(_) => panic!("Invalid replacement pattern"),
     }
-}
-
-fn rename_files(
-    directory: &PathBuf,
-    matcher: &dyn Matcher,
-    name_generator: &dyn NameGenerator,
-) -> Result<(), io::Error> {
-    for entry in read_dir(directory)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            continue;
-        }
-
-        let old_name = entry.file_name();
-        let new_name = create_new_name(&old_name.to_str().unwrap(), matcher, name_generator);
-
-        rename(old_name, new_name).unwrap();
-    }
-
-    Ok(())
-}
-
-fn create_new_name(
-    old_name: &str,
-    matcher: &dyn Matcher,
-    name_generator: &dyn NameGenerator,
-) -> String {
-    let capture_groups = matcher.match_against(old_name).unwrap();
-    name_generator.generate_name(capture_groups).unwrap()
 }

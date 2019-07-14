@@ -1,4 +1,5 @@
 use crate::matching_pattern::*;
+use std::fmt::Debug;
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
@@ -6,10 +7,11 @@ pub(crate) struct CaptureGroup {
     pub(crate) contents: String,
 }
 
-pub(crate) trait Matcher {
+pub(crate) trait Matcher: Debug {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()>;
 }
 
+#[derive(Debug)]
 pub(crate) struct MatcherImpl {
     pattern: Pattern,
 }

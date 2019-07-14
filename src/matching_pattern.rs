@@ -7,7 +7,7 @@ use nom::combinator::{map, value};
 use nom::multi::many1;
 use nom::sequence::delimited;
 use std::error::Error;
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 use std::iter;
 use std::num::NonZeroUsize;
 
@@ -46,16 +46,16 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
-pub(crate) trait Parser {
+pub(crate) trait Parser: Debug {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct ParserImpl {}
 
 impl ParserImpl {
     pub(crate) fn new() -> Self {
-        ParserImpl::default()
+        ParserImpl {}
     }
 }
 
