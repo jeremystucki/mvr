@@ -68,20 +68,17 @@ fn consume_tokens<'a>(
     tokens: &'a [&'a Token],
 ) -> impl Iterator<Item = Result<usize, ()>> + 'a {
     let mut current_position = 0;
-    tokens
-        .into_iter()
-        .enumerate()
-        .map(move |(token_index, token)| {
-            let length = consume_token(
-                &input[current_position..],
-                token,
-                &tokens.get(token_index + 1..).unwrap_or(&[]),
-            )?;
+    tokens.iter().enumerate().map(move |(token_index, token)| {
+        let length = consume_token(
+            &input[current_position..],
+            token,
+            &tokens.get(token_index + 1..).unwrap_or(&[]),
+        )?;
 
-            current_position += length;
+        current_position += length;
 
-            Ok(length)
-        })
+        Ok(length)
+    })
 }
 
 fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()> {
