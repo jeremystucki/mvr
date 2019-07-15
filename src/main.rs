@@ -1,11 +1,12 @@
+use crate::controller::{Controller, ControllerImpl, RenamerFactory};
 use crate::matcher::MatcherImpl;
-use crate::matching_pattern::Parser as MatchingPatternParser;
 use crate::name_generator::NameGeneratorImpl;
-use crate::renamer::{Renamer, RenamerImpl};
-use crate::replacement_pattern::Parser as ReplacementPatternParser;
+use crate::renamer::RenamerImpl;
 use clap::{crate_version, App, Arg};
 use std::env::current_dir;
+use std::error::Error;
 
+mod controller;
 mod matcher;
 mod matching_pattern;
 mod name_generator;
@@ -15,7 +16,7 @@ mod replacement_pattern;
 const OLD_PATTERN_PARAMETER_NAME: &str = "old pattern";
 const NEW_PATTERN_PARAMETER_NAME: &str = "new pattern";
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("mvr")
         .author("Jeremy Stucki")
         .version(crate_version!())
@@ -36,37 +37,25 @@ fn main() {
         )
         .get_matches();
 
-    let matching_pattern =
-        parse_matching_pattern(matches.value_of(OLD_PATTERN_PARAMETER_NAME).unwrap());
+    let renamer_factory: Box<RenamerFactory> = Box::new(|matching_pattern, replacement_pattern| {
+        let matcher = MatcherImpl::new(matching_pattern);
+        let name_generator = NameGeneratorImpl::new(replacement_pattern);
 
-    let replacement_pattern =
-        parse_replacement_pattern(matches.value_of(NEW_PATTERN_PARAMETER_NAME).unwrap());
+        Box::new(RenamerImpl::new(
+            Box::new(matcher),
+            Box::new(name_generator),
+        ))
+    });
 
-    let matcher = MatcherImpl::new(matching_pattern);
-    let name_generator = NameGeneratorImpl::new(replacement_pattern);
+    let controller = ControllerImpl::new(
+        Box::new(matching_pattern::ParserImpl::new()),
+        Box::new(replacement_pattern::ParserImpl::new()),
+        renamer_factory,
+    );
 
-    let renamer = RenamerImpl::new(Box::new(matcher), Box::new(name_generator));
-
+    let matching_pattern = matches.value_of(OLD_PATTERN_PARAMETER_NAME).unwrap();
+    let replacement_pattern = matches.value_of(NEW_PATTERN_PARAMETER_NAME).unwrap();
     let directory = current_dir().expect("Cannot access directory");
-    renamer
-        .rename_files_in_directory(directory.as_path())
-        .unwrap();
-}
 
-fn parse_matching_pattern(string: &str) -> matching_pattern::Pattern {
-    let parser = matching_pattern::ParserImpl::new();
-    match parser.parse(string) {
-        Ok(pattern) => pattern,
-        Err(matching_pattern::ParsingError::InvalidSyntax) => panic!("Invalid matching pattern"),
-    }
-}
-
-fn parse_replacement_pattern(string: &str) -> replacement_pattern::Pattern {
-    let parser = replacement_pattern::ParserImpl::new();
-    match parser.parse(string) {
-        Ok(pattern) => pattern,
-        Err(replacement_pattern::ParsingError::InvalidSyntax) => {
-            panic!("Invalid replacement pattern")
-        }
-    }
+    controller.rename_files_by_pattern(matching_pattern, replacement_pattern, &directory)
 }

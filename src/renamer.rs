@@ -18,7 +18,7 @@ impl Display for RenamerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
             RenamerError::IoError(_) => "An io error occurred",
-            RenamerError::MatcherError => "Invalid input pattern",
+            RenamerError::MatcherError => "Could not match name against file",
             RenamerError::NameGeneratorError(_) => "Unable to create the new file name",
             RenamerError::InvalidFileName => "Invalid file name. Make sure it is is valid unicode",
         };
@@ -72,8 +72,16 @@ impl Renamer for RenamerImpl {
             }
 
             let old_name = entry.file_name();
-            let new_name =
-                self.create_new_name(old_name.to_str().ok_or(RenamerError::InvalidFileName)?)?;
+
+            let new_name = match self
+                .create_new_name(old_name.to_str().ok_or(RenamerError::InvalidFileName)?)
+            {
+                Ok(new_name) => new_name,
+                Err(_) => {
+                    eprintln!("Ignoring file {:?}", old_name);
+                    continue;
+                }
+            };
 
             rename(old_name, new_name).map_err(RenamerError::IoError)?;
         }
