@@ -78,10 +78,16 @@ impl Renamer for RenamerImpl {
             {
                 Ok(new_name) => new_name,
                 Err(_) => {
-                    eprintln!("Ignoring file {:?}", old_name);
+                    eprintln!("Ignoring file: {:?}", old_name);
                     continue;
                 }
             };
+
+            println!("Renaming {:?} → {:?}", &old_name, &new_name);
+
+            if Path::new(&new_name).exists() {
+                eprintln!("Path already exists. Skipping...");
+            }
 
             rename(old_name, new_name).map_err(RenamerError::IoError)?;
         }
