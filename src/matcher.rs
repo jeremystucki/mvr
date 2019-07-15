@@ -41,7 +41,7 @@ impl Matcher for MatcherImpl {
 
         let lengths = consume_tokens(input, &tokens).collect::<Result<Vec<_>, _>>()?;
 
-        let lengths_sum: usize = lengths.iter().copied().sum();
+        let lengths_sum: usize = lengths.iter().sum();
         if lengths_sum != input.len() {
             return Err(());
         }
