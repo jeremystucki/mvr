@@ -280,4 +280,41 @@ mod tests {
 
         assert_eq!(expected, actual)
     }
+
+    #[test]
+    fn capture_groups_work() {
+        let expected = Ok(vec![CaptureGroup {
+            contents: String::from("foo.bar"),
+        }]);
+
+        let pattern = Pattern {
+            elements: vec![
+                Element::Group(vec![Token::Wildcard, Token::Text(String::from(".bar"))]),
+                Element::Token(Token::Text(String::from(".bar"))),
+            ],
+        };
+
+        let matcher = MatcherImpl::new(pattern);
+
+        let actual = matcher.match_against("foo.bar.bar");
+
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn fails_if_input_is_too_short() {
+        let expected = Err(());
+
+        let pattern = Pattern {
+            elements: vec![Element::Token(Token::FixedLength(
+                NonZeroUsize::new(5).unwrap(),
+            ))],
+        };
+
+        let matcher = MatcherImpl::new(pattern);
+
+        let actual = matcher.match_against("foo");
+
+        assert_eq!(expected, actual)
+    }
 }
