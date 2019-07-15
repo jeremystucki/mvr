@@ -16,3 +16,12 @@ script:
   - cargo clippy -- -Dwarnings
   - cargo clippy --tests -- -Dwarnings
   - cargo fmt --all -- --check
+
+deploy:
+  provider: script
+  on:
+    branch: master
+    condition: $TRAVIS_RUST_VERSION = stable
+  script: >-
+    cargo install -f cargo-tarpaulin &&
+    cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
