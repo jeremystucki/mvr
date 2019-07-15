@@ -30,7 +30,7 @@ impl Display for RenamerError {
 impl Error for RenamerError {}
 
 pub(crate) trait Renamer {
-    fn rename_files_in_directory<P: AsRef<Path>>(&self, directory: P) -> Result<(), RenamerError>;
+    fn rename_files_in_directory(&self, directory: &Path) -> Result<(), Box<dyn Error>>;
 }
 
 #[derive(Debug)]
@@ -60,7 +60,7 @@ impl RenamerImpl {
 }
 
 impl Renamer for RenamerImpl {
-    fn rename_files_in_directory<P: AsRef<Path>>(&self, directory: P) -> Result<(), RenamerError> {
+    fn rename_files_in_directory(&self, directory: &Path) -> Result<(), Box<dyn Error>> {
         let dir_entry = read_dir(directory).map_err(RenamerError::IoError)?;
 
         for entry in dir_entry {

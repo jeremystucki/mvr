@@ -48,7 +48,9 @@ fn main() {
     let renamer = RenamerImpl::new(Box::new(matcher), Box::new(name_generator));
 
     let directory = current_dir().expect("Cannot access directory");
-    renamer.rename_files_in_directory(directory).unwrap();
+    renamer
+        .rename_files_in_directory(directory.as_path())
+        .unwrap();
 }
 
 fn parse_matching_pattern(string: &str) -> matching_pattern::Pattern {
