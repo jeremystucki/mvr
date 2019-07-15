@@ -13,36 +13,47 @@ pub(crate) trait Matcher: Debug {
 
 #[derive(Debug)]
 pub(crate) struct MatcherImpl {
-    pattern: Pattern,
+    tokens: Vec<Token>,
+    capture_group_indices: Vec<Option<usize>>,
 }
 
 impl MatcherImpl {
     pub(crate) fn new(pattern: Pattern) -> Self {
-        Self { pattern }
+        let (tokens, capture_group_indices) = Self::compile(pattern);
+
+        Self {
+            tokens,
+            capture_group_indices,
+        }
+    }
+
+    fn compile(pattern: Pattern) -> (Vec<Token>, Vec<Option<usize>>) {
+        pattern
+            .elements
+            .into_iter()
+            .scan(0usize, |capture_group_index, element| {
+                Some(match element {
+                    Element::Token(token) => vec![(token, None)],
+                    Element::Group(tokens) => {
+                        *capture_group_index += 1;
+
+                        tokens
+                            .into_iter()
+                            .map(|token| (token, Some(*capture_group_index - 1)))
+                            .collect()
+                    }
+                })
+            })
+            .flatten()
+            .unzip()
     }
 }
 
 impl Matcher for MatcherImpl {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()> {
-        let tokens_to_capture_groups: Vec<_> = self
-            .pattern
-            .elements
-            .iter()
-            .flat_map(|element| match element {
-                Element::Token(token) => vec![(token, false)],
-                Element::Group(tokens) => tokens.iter().map(|token| (token, true)).collect(),
-            })
-            .collect();
+        let lengths = consume_tokens(input, &self.tokens).collect::<Result<Vec<_>, _>>()?;
 
-        let tokens: Vec<_> = tokens_to_capture_groups
-            .iter()
-            .map(|(token, _)| *token)
-            .collect();
-
-        let lengths = consume_tokens(input, &tokens).collect::<Result<Vec<_>, _>>()?;
-
-        let lengths_sum: usize = lengths.iter().sum();
-        if lengths_sum != input.len() {
+        if lengths.iter().sum::<usize>() != input.len() {
             return Err(());
         }
 
@@ -52,20 +63,32 @@ impl Matcher for MatcherImpl {
             Some((own_position, *length))
         });
 
-        Ok(tokens_to_capture_groups
+        let mut capture_groups = Vec::<CaptureGroup>::new();
+
+        self.capture_group_indices
             .iter()
             .zip(positions_and_lengths)
-            .filter(|((_, capture_group), _)| *capture_group)
-            .map(|((_, _), (position, length))| CaptureGroup {
-                contents: String::from(&input[position..position + length]),
+            .filter_map(|(capture_group_index, position_and_length)| {
+                capture_group_index.map(|index| (index, position_and_length))
             })
-            .collect())
+            .for_each(|(capture_group_index, (position, length))| {
+                let value = String::from(&input[position..position + length]);
+
+                match capture_groups.get_mut(capture_group_index) {
+                    Some(capture_group) => capture_group.contents.push_str(&value),
+                    None => {
+                        capture_groups.push(CaptureGroup { contents: value });
+                    }
+                }
+            });
+
+        Ok(capture_groups)
     }
 }
 
 fn consume_tokens<'a>(
     input: &'a str,
-    tokens: &'a [&'a Token],
+    tokens: &'a [Token],
 ) -> impl Iterator<Item = Result<usize, ()>> + 'a {
     let mut current_position = 0;
     tokens.iter().enumerate().map(move |(token_index, token)| {
@@ -81,7 +104,7 @@ fn consume_tokens<'a>(
     })
 }
 
-fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()> {
+fn consume_token(input: &str, head: &Token, tail: &[Token]) -> Result<usize, ()> {
     match head {
         Token::Text(text) => consume_text_token(text, input),
         Token::FixedLength(length) => consume_fixed_length_token(*length, input),
@@ -107,7 +130,7 @@ fn consume_fixed_length_token(length: NonZeroUsize, input: &str) -> Result<usize
     }
 }
 
-fn consume_wildcard_token(input: &str, tail: &[&Token]) -> Result<usize, ()> {
+fn consume_wildcard_token(input: &str, tail: &[Token]) -> Result<usize, ()> {
     if tail.is_empty() {
         return Ok(input.len());
     }
@@ -277,6 +300,43 @@ mod tests {
         let matcher = MatcherImpl::new(pattern);
 
         let actual = matcher.match_against("foo.bar.baz");
+
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn capture_group_with_multiple_tokens() {
+        let expected = Ok(vec![CaptureGroup {
+            contents: String::from("foo.bar"),
+        }]);
+
+        let pattern = Pattern {
+            elements: vec![
+                Element::Group(vec![Token::Wildcard, Token::Text(String::from(".bar"))]),
+                Element::Token(Token::Text(String::from(".bar"))),
+            ],
+        };
+
+        let matcher = MatcherImpl::new(pattern);
+
+        let actual = matcher.match_against("foo.bar.bar");
+
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn fails_if_input_is_too_short() {
+        let expected = Err(());
+
+        let pattern = Pattern {
+            elements: vec![Element::Token(Token::FixedLength(
+                NonZeroUsize::new(5).unwrap(),
+            ))],
+        };
+
+        let matcher = MatcherImpl::new(pattern);
+
+        let actual = matcher.match_against("foo");
 
         assert_eq!(expected, actual)
     }
