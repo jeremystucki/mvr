@@ -2,10 +2,10 @@ use crate::matcher::CaptureGroup;
 use crate::replacement_pattern::{Element, Pattern};
 use std::error::Error;
 use std::fmt;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 #[derive(Debug, PartialEq)]
-enum NameGeneratorError {
+pub(crate) enum NameGeneratorError {
     MissingCaptureGroup(usize),
 }
 
@@ -23,19 +23,20 @@ impl Display for NameGeneratorError {
 
 impl Error for NameGeneratorError {}
 
-trait NameGenerator {
+pub(crate) trait NameGenerator: Debug {
     fn generate_name(
         &self,
         capture_groups: Vec<CaptureGroup>,
     ) -> Result<String, NameGeneratorError>;
 }
 
-struct NameGeneratorImpl {
+#[derive(Debug)]
+pub(crate) struct NameGeneratorImpl {
     replacement_pattern: Pattern,
 }
 
 impl NameGeneratorImpl {
-    fn new(replacement_pattern: Pattern) -> Self {
+    pub(crate) fn new(replacement_pattern: Pattern) -> Self {
         Self {
             replacement_pattern,
         }

@@ -1,21 +1,23 @@
 use crate::matching_pattern::*;
+use std::fmt::Debug;
 use std::num::NonZeroUsize;
 
 #[derive(Debug, PartialEq)]
-pub struct CaptureGroup {
-    pub contents: String,
+pub(crate) struct CaptureGroup {
+    pub(crate) contents: String,
 }
 
-pub trait Matcher {
+pub(crate) trait Matcher: Debug {
     fn match_against(&self, input: &str) -> Result<Vec<CaptureGroup>, ()>;
 }
 
-pub struct MatcherImpl {
+#[derive(Debug)]
+pub(crate) struct MatcherImpl {
     pattern: Pattern,
 }
 
 impl MatcherImpl {
-    fn new(pattern: Pattern) -> Self {
+    pub(crate) fn new(pattern: Pattern) -> Self {
         Self { pattern }
     }
 }
