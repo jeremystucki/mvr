@@ -28,24 +28,23 @@ impl MatcherImpl {
     }
 
     fn compile(pattern: Pattern) -> (Vec<Token>, Vec<Option<usize>>) {
-        let mut capture_group_index: usize = 0;
-
         pattern
             .elements
             .into_iter()
-            .flat_map(|element| match element {
-                Element::Token(token) => vec![(token, None)],
-                Element::Group(tokens) => {
-                    let tokens = tokens
-                        .into_iter()
-                        .map(|token| (token, Some(capture_group_index)))
-                        .collect();
+            .scan(0usize, |capture_group_index, element| {
+                Some(match element {
+                    Element::Token(token) => vec![(token, None)],
+                    Element::Group(tokens) => {
+                        *capture_group_index += 1;
 
-                    capture_group_index += 1;
-
-                    tokens
-                }
+                        tokens
+                            .into_iter()
+                            .map(|token| (token, Some(*capture_group_index - 1)))
+                            .collect()
+                    }
+                })
             })
+            .flatten()
             .unzip()
     }
 }
@@ -64,15 +63,26 @@ impl Matcher for MatcherImpl {
             Some((own_position, *length))
         });
 
-        Ok(self
-            .capture_group_indices
+        let mut capture_groups = Vec::<CaptureGroup>::new();
+
+        self.capture_group_indices
             .iter()
             .zip(positions_and_lengths)
-            .filter(|(capture_group, _)| capture_group.is_some())
-            .map(|(_, (position, length))| CaptureGroup {
-                contents: String::from(&input[position..position + length]),
+            .filter_map(|(capture_group_index, position_and_length)| {
+                capture_group_index.map(|index| (index, position_and_length))
             })
-            .collect())
+            .for_each(|(capture_group_index, (position, length))| {
+                let value = String::from(&input[position..position + length]);
+
+                match capture_groups.get_mut(capture_group_index) {
+                    Some(capture_group) => capture_group.contents.push_str(&value),
+                    None => {
+                        capture_groups.push(CaptureGroup { contents: value });
+                    }
+                }
+            });
+
+        Ok(capture_groups)
     }
 }
 
