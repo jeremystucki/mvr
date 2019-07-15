@@ -6,6 +6,9 @@ use std::fs::{read_dir, rename};
 use std::path::Path;
 use std::{fmt, io};
 
+#[cfg(test)]
+use mockiato::mockable;
+
 #[derive(Debug)]
 pub(crate) enum RenamerError {
     IoError(io::Error),
@@ -29,6 +32,7 @@ impl Display for RenamerError {
 
 impl Error for RenamerError {}
 
+#[cfg_attr(test, mockable)]
 pub(crate) trait Renamer {
     fn rename_files_in_directory(&self, directory: &Path) -> Result<(), Box<dyn Error>>;
 }

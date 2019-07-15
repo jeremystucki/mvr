@@ -68,3 +68,54 @@ impl Debug for ControllerImpl {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::renamer::RenamerMock;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test() {
+        let mut matching_pattern_parser = matching_pattern::ParserMock::new();
+        let expected_matching_pattern = matching_pattern::Pattern {
+            elements: vec![matching_pattern::Element::Group(vec![
+                matching_pattern::Token::Wildcard,
+            ])],
+        };
+        matching_pattern_parser
+            .expect_parse(|arg| arg.partial_eq("foo"))
+            .returns(Ok(expected_matching_pattern.clone()));
+
+        let mut replacement_pattern_parser = replacement_pattern::ParserMock::new();
+        let expected_replacement_pattern = replacement_pattern::Pattern {
+            elements: vec![replacement_pattern::Element::CaptureGroup(2)],
+        };
+        replacement_pattern_parser
+            .expect_parse(|arg| arg.partial_eq("bar"))
+            .returns(Ok(expected_replacement_pattern.clone()));
+
+        let renamer_factory: Box<RenamerFactory> =
+            Box::new(move |matching_pattern, replacement_pattern| {
+                assert_eq!(expected_matching_pattern, matching_pattern);
+                assert_eq!(expected_replacement_pattern, replacement_pattern);
+
+                let mut renamer = RenamerMock::new();
+                renamer
+                    .expect_rename_files_in_directory(|arg| arg.partial_eq(PathBuf::from("baz")))
+                    .returns_once(Ok(()));
+
+                Box::new(renamer)
+            });
+
+        let controller = ControllerImpl::new(
+            Box::new(matching_pattern_parser),
+            Box::new(replacement_pattern_parser),
+            renamer_factory,
+        );
+
+        controller
+            .rename_files_by_pattern("foo", "bar", &PathBuf::from("baz"))
+            .unwrap();
+    }
+}

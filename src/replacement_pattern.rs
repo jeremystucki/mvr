@@ -7,18 +7,21 @@ use nom::sequence::preceded;
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 
-#[derive(Debug, PartialEq)]
+#[cfg(test)]
+use mockiato::mockable;
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Element {
     Text(String),
     CaptureGroup(usize),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Pattern {
     pub(crate) elements: Vec<Element>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ParsingError {
     InvalidSyntax,
 }
@@ -35,6 +38,7 @@ impl Display for ParsingError {
 
 impl Error for ParsingError {}
 
+#[cfg_attr(test, mockable)]
 pub(crate) trait Parser: Debug {
     fn parse(&self, input: &str) -> Result<Pattern, ParsingError>;
 }
