@@ -39,24 +39,10 @@ impl Matcher for MatcherImpl {
             .map(|(token, _)| *token)
             .collect();
 
-        let mut current_position = 0;
-        let lengths = tokens
-            .iter()
-            .enumerate()
-            .map(|(token_index, token)| {
-                let length = consume_token(
-                    &input[current_position..],
-                    token,
-                    &tokens.get(token_index + 1..).unwrap_or(&[]),
-                )?;
+        let lengths = consume_tokens(input, &tokens).collect::<Result<Vec<_>, _>>()?;
 
-                current_position += length;
-
-                Ok(length)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        if current_position != input.len() {
+        let lengths_sum: usize = lengths.iter().sum();
+        if lengths_sum != input.len() {
             return Err(());
         }
 
@@ -75,6 +61,24 @@ impl Matcher for MatcherImpl {
             })
             .collect())
     }
+}
+
+fn consume_tokens<'a>(
+    input: &'a str,
+    tokens: &'a [&'a Token],
+) -> impl Iterator<Item = Result<usize, ()>> + 'a {
+    let mut current_position = 0;
+    tokens.iter().enumerate().map(move |(token_index, token)| {
+        let length = consume_token(
+            &input[current_position..],
+            token,
+            &tokens.get(token_index + 1..).unwrap_or(&[]),
+        )?;
+
+        current_position += length;
+
+        Ok(length)
+    })
 }
 
 fn consume_token(input: &str, head: &Token, tail: &[&Token]) -> Result<usize, ()> {
@@ -104,22 +108,17 @@ fn consume_fixed_length_token(length: NonZeroUsize, input: &str) -> Result<usize
 }
 
 fn consume_wildcard_token(input: &str, tail: &[&Token]) -> Result<usize, ()> {
-    match tail.get(0) {
-        None => Ok(input.len()),
-        Some(Token::Text(text)) => input.find(text).ok_or(()),
-        Some(Token::FixedLength(length)) => {
-            let length = length.get();
-            match tail.get(1) {
-                None => Ok(input.len() - length),
-                Some(Token::Text(text)) => input[length..]
-                    .find(text)
-                    .map(|position| position - length)
-                    .ok_or(()),
-                Some(_) => unreachable!(),
-            }
-        }
-        Some(_) => unreachable!(),
+    if tail.is_empty() {
+        return Ok(input.len());
     }
+
+    for (char_index, _) in input.char_indices() {
+        if consume_tokens(&input[char_index..], tail).all(|result| result.is_ok()) {
+            return Ok(char_index);
+        }
+    }
+
+    Err(())
 }
 
 #[cfg(test)]
@@ -257,6 +256,27 @@ mod tests {
         let matcher = MatcherImpl::new(pattern);
 
         let actual = matcher.match_against("foo.bar");
+
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn wildcard_looks_ahead_for_all_following_tokens() {
+        let expected = Ok(vec![CaptureGroup {
+            contents: String::from("baz"),
+        }]);
+
+        let pattern = Pattern {
+            elements: vec![
+                Element::Token(Token::Wildcard),
+                Element::Token(Token::Text(String::from("."))),
+                Element::Group(vec![Token::Text(String::from("baz"))]),
+            ],
+        };
+
+        let matcher = MatcherImpl::new(pattern);
+
+        let actual = matcher.match_against("foo.bar.baz");
 
         assert_eq!(expected, actual)
     }
