@@ -65,11 +65,11 @@ impl RenamerImpl {
 
 impl Renamer for RenamerImpl {
     fn rename_files_in_directory(&self, directory: &Path) -> Result<(), Box<dyn Error>> {
-        let dir_entry = read_dir(directory).map_err(RenamerError::IoError)?;
+        let dir_entries: Vec<_> = read_dir(directory)
+            .map_err(RenamerError::IoError)?
+            .collect::<Result<_, _>>()?;
 
-        for entry in dir_entry {
-            let entry = entry.map_err(RenamerError::IoError)?;
-
+        for entry in dir_entries {
             let path = entry.path();
             if path.is_dir() {
                 continue;
