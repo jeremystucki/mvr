@@ -68,7 +68,9 @@ impl Parser for ParserImpl {
         let elements = many1(alt((capture_group, text)));
 
         let pattern = match elements(input).map_err(|_| ParsingError::InvalidSyntax)? {
-            (remaining_text, _) if !remaining_text.is_empty() => Err(ParsingError::InvalidSyntax)?,
+            (remaining_text, _) if !remaining_text.is_empty() => {
+                return Err(ParsingError::InvalidSyntax)
+            }
             (_, elements) => Pattern { elements },
         };
 
