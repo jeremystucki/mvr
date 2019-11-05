@@ -87,12 +87,14 @@ impl Parser for ParserImpl {
         let elements = many1(alt((group, map(&token, Element::Token))));
 
         let pattern = match elements(input).map_err(|_| ParsingError::InvalidSyntax)? {
-            (remaining_text, _) if !remaining_text.is_empty() => Err(ParsingError::InvalidSyntax)?,
+            (remaining_text, _) if !remaining_text.is_empty() => {
+                return Err(ParsingError::InvalidSyntax)
+            }
             (_, elements) => Pattern { elements },
         };
 
         if contains_repeated_wildcards(&pattern) {
-            Err(ParsingError::InvalidSyntax)?
+            return Err(ParsingError::InvalidSyntax);
         }
 
         Ok(pattern)
