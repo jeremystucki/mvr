@@ -1,3 +1,5 @@
+use crate::config_provider::ConfigProvider;
+use crate::planner::Planner;
 use crate::renamer::Renamer;
 use crate::{matching_pattern, replacement_pattern};
 use nameof::name_of;
@@ -17,23 +19,28 @@ pub(crate) trait Controller: Debug {
 
 pub(crate) type RenamerFactory =
     dyn Fn(matching_pattern::Pattern, replacement_pattern::Pattern) -> Box<dyn Renamer>;
+pub(crate) type PlannerFactory =
+    dyn Fn(matching_pattern::Pattern, replacement_pattern::Pattern) -> Box<dyn Planner>;
 
 pub(crate) struct ControllerImpl {
     matching_pattern_parser: Box<dyn matching_pattern::Parser>,
     replacement_pattern_parser: Box<dyn replacement_pattern::Parser>,
-    renamer_factory: Box<RenamerFactory>,
+    renamer: Box<Renamer>,
+    planner_factory: Box<PlannerFactory>,
 }
 
 impl ControllerImpl {
     pub(crate) fn new(
         matching_pattern_parser: Box<dyn matching_pattern::Parser>,
         replacement_pattern_parser: Box<dyn replacement_pattern::Parser>,
-        renamer_factory: Box<RenamerFactory>,
+        renamer: Box<Renamer>,
+        planner_factory: Box<PlannerFactory>,
     ) -> Self {
         Self {
             matching_pattern_parser,
             replacement_pattern_parser,
-            renamer_factory,
+            renamer,
+            planner_factory,
         }
     }
 }
@@ -48,9 +55,10 @@ impl Controller for ControllerImpl {
         let matching_pattern = self.matching_pattern_parser.parse(matching_pattern)?;
         let replacement_pattern = self.replacement_pattern_parser.parse(replacement_pattern)?;
 
-        let renamer = (self.renamer_factory)(matching_pattern, replacement_pattern);
+        let planner = (self.planner_factory)(matching_pattern, replacement_pattern);
+        let plan = planner.get_actions(directory.to_path_buf())?;
 
-        renamer.rename_files_in_directory(directory)
+        self.renamer.execute_plan(plan)
     }
 }
 

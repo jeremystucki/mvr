@@ -6,6 +6,7 @@ use std::fs::{read_dir, rename};
 use std::path::Path;
 use std::{fmt, io};
 
+use crate::config_provider::ConfigProvider;
 #[cfg(test)]
 use mockiato::mockable;
 
@@ -44,7 +45,10 @@ pub(crate) struct RenamerImpl {
 }
 
 impl RenamerImpl {
-    pub(crate) fn new(matcher: Box<dyn Matcher>, name_generator: Box<dyn NameGenerator>) -> Self {
+    pub(crate) fn new(
+        matcher: Box<dyn Matcher>,
+        name_generator: Box<dyn NameGenerator>,
+    ) -> Self {
         Self {
             matcher,
             name_generator,
