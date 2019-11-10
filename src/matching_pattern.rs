@@ -41,7 +41,6 @@ pub(crate) enum ParsingError {
 impl Pattern {
     pub fn as_glob(&self) -> String {
         self.tokens()
-            .into_iter()
             .map(|element| match element {
                 Token::Text(text) => text.clone(),
                 Token::FixedLength(length) => repeat('?').take(length.get()).collect(),
