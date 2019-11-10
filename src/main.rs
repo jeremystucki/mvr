@@ -38,10 +38,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         .get_matches();
 
     let renamer_factory: Box<RenamerFactory> = Box::new(|matching_pattern, replacement_pattern| {
+        let matching_pattern_glob = matching_pattern.as_glob();
         let matcher = MatcherImpl::new(matching_pattern);
         let name_generator = NameGeneratorImpl::new(replacement_pattern);
 
         Box::new(RenamerImpl::new(
+            matching_pattern_glob,
             Box::new(matcher),
             Box::new(name_generator),
         ))

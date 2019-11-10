@@ -1,13 +1,15 @@
 use crate::matcher::Matcher;
 use crate::name_generator::{NameGenerator, NameGeneratorError};
+use glob::glob;
 use std::error::Error;
 use std::fmt::Display;
-use std::fs::{read_dir, rename};
+use std::fs::{create_dir_all, rename};
 use std::path::Path;
 use std::{fmt, io};
 
 #[cfg(test)]
 use mockiato::mockable;
+use std::env::set_current_dir;
 
 #[derive(Debug)]
 pub(crate) enum RenamerError {
@@ -15,6 +17,7 @@ pub(crate) enum RenamerError {
     MatcherError,
     NameGeneratorError(NameGeneratorError),
     InvalidFileName,
+    InternalError(Box<dyn Error>),
 }
 
 impl Display for RenamerError {
@@ -24,6 +27,7 @@ impl Display for RenamerError {
             RenamerError::MatcherError => "Could not match name against file",
             RenamerError::NameGeneratorError(_) => "Unable to create the new file name",
             RenamerError::InvalidFileName => "Invalid file name. Make sure it is is valid unicode",
+            RenamerError::InternalError(_) => "An internal error occured",
         };
 
         write!(f, "{}", message)
@@ -39,13 +43,19 @@ pub(crate) trait Renamer {
 
 #[derive(Debug)]
 pub(crate) struct RenamerImpl {
+    matching_pattern_glob: String,
     matcher: Box<dyn Matcher>,
     name_generator: Box<dyn NameGenerator>,
 }
 
 impl RenamerImpl {
-    pub(crate) fn new(matcher: Box<dyn Matcher>, name_generator: Box<dyn NameGenerator>) -> Self {
+    pub(crate) fn new(
+        matching_pattern_glob: String,
+        matcher: Box<dyn Matcher>,
+        name_generator: Box<dyn NameGenerator>,
+    ) -> Self {
         Self {
+            matching_pattern_glob,
             matcher,
             name_generator,
         }
@@ -65,21 +75,16 @@ impl RenamerImpl {
 
 impl Renamer for RenamerImpl {
     fn rename_files_in_directory(&self, directory: &Path) -> Result<(), Box<dyn Error>> {
-        let dir_entries: Vec<_> = read_dir(directory)
-            .map_err(RenamerError::IoError)?
-            .collect::<Result<_, _>>()?;
+        set_current_dir(directory).map_err(|error| RenamerError::InternalError(Box::new(error)))?;
 
-        for entry in dir_entries {
-            let path = entry.path();
-            if path.is_dir() {
-                continue;
-            }
+        // TODO: Make sure globs work the same way as the matcher
+        for old_path in glob(self.matching_pattern_glob.as_ref())
+            .map_err(|error| RenamerError::InternalError(Box::new(error)))?
+            .filter_map(Result::ok)
+        {
+            let old_name = old_path.to_str().ok_or(RenamerError::InvalidFileName)?;
 
-            let old_name = entry.file_name();
-
-            let new_name = match self
-                .create_new_name(old_name.to_str().ok_or(RenamerError::InvalidFileName)?)
-            {
+            let new_name = match self.create_new_name(old_name) {
                 Ok(new_name) => new_name,
                 Err(_) => {
                     eprintln!("Ignoring file: {:?}", old_name);
@@ -89,11 +94,14 @@ impl Renamer for RenamerImpl {
 
             println!("Renaming {:?} → {:?}", &old_name, &new_name);
 
-            if Path::new(&new_name).exists() {
+            let new_path = Path::new(&new_name);
+            if new_path.exists() {
                 eprintln!("Path already exists. Skipping...");
             }
 
-            rename(old_name, new_name).map_err(RenamerError::IoError)?;
+            create_dir_all(new_path.parent().unwrap()).map_err(RenamerError::IoError)?;
+
+            rename(old_path, new_path).map_err(RenamerError::IoError)?;
         }
 
         Ok(())
