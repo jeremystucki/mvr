@@ -13,6 +13,7 @@ use std::num::NonZeroUsize;
 
 #[cfg(test)]
 use mockiato::mockable;
+use std::iter::repeat;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Token {
@@ -35,6 +36,25 @@ pub(crate) struct Pattern {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ParsingError {
     InvalidSyntax,
+}
+
+impl Pattern {
+    pub fn as_glob(&self) -> String {
+        self.tokens()
+            .map(|element| match element {
+                Token::Text(text) => text.clone(),
+                Token::FixedLength(length) => repeat('?').take(length.get()).collect(),
+                Token::Wildcard => String::from("*"),
+            })
+            .collect()
+    }
+
+    fn tokens(&self) -> impl Iterator<Item = &Token> {
+        self.elements.iter().flat_map(|element| match element {
+            Element::Token(token) => Either::Left(iter::once(token)),
+            Element::Group(tokens) => Either::Right(tokens.iter()),
+        })
+    }
 }
 
 impl Display for ParsingError {
@@ -103,12 +123,7 @@ impl Parser for ParserImpl {
 
 fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
     pattern
-        .elements
-        .iter()
-        .flat_map(|element| match element {
-            Element::Token(token) => Either::Left(iter::once(token)),
-            Element::Group(tokens) => Either::Right(tokens.iter()),
-        })
+        .tokens()
         .filter(|token| match token {
             Token::FixedLength(_) => false,
             _ => true,
