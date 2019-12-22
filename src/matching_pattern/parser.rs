@@ -1,5 +1,4 @@
-use either::Either;
-use itertools::Itertools;
+use super::pattern::*;
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::character::complete::char as nom_char;
@@ -8,53 +7,14 @@ use nom::multi::many1;
 use nom::sequence::delimited;
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
-use std::iter;
 use std::num::NonZeroUsize;
 
 #[cfg(test)]
 use mockiato::mockable;
-use std::iter::repeat;
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Token {
-    Text(String),
-    FixedLength(NonZeroUsize),
-    Wildcard,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Element {
-    Token(Token),
-    Group(Vec<Token>),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Pattern {
-    pub(crate) elements: Vec<Element>,
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ParsingError {
     InvalidSyntax,
-}
-
-impl Pattern {
-    pub fn as_glob(&self) -> String {
-        self.tokens()
-            .map(|element| match element {
-                Token::Text(text) => text.clone(),
-                Token::FixedLength(length) => repeat('?').take(length.get()).collect(),
-                Token::Wildcard => String::from("*"),
-            })
-            .collect()
-    }
-
-    fn tokens(&self) -> impl Iterator<Item = &Token> {
-        self.elements.iter().flat_map(|element| match element {
-            Element::Token(token) => Either::Left(iter::once(token)),
-            Element::Group(tokens) => Either::Right(tokens.iter()),
-        })
-    }
 }
 
 impl Display for ParsingError {
@@ -119,19 +79,6 @@ impl Parser for ParserImpl {
 
         Ok(pattern)
     }
-}
-
-fn contains_repeated_wildcards(pattern: &Pattern) -> bool {
-    pattern
-        .tokens()
-        .filter(|token| match token {
-            Token::FixedLength(_) => false,
-            _ => true,
-        })
-        .tuple_windows()
-        .any(|(first_value, second_value)| {
-            *first_value == Token::Wildcard && *second_value == Token::Wildcard
-        })
 }
 
 #[cfg(test)]
