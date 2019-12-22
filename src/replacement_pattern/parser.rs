@@ -1,3 +1,5 @@
+use super::Pattern;
+use crate::replacement_pattern::Element;
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::character::complete::{char as nom_char, digit1};
@@ -9,17 +11,6 @@ use std::fmt::{self, Debug, Display};
 
 #[cfg(test)]
 use mockiato::mockable;
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Element {
-    Text(String),
-    CaptureGroup(usize),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Pattern {
-    pub(crate) elements: Vec<Element>,
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ParsingError {
