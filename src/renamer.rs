@@ -26,8 +26,8 @@ impl Display for RenamerError {
             RenamerError::IoError(_) => "An io error occurred",
             RenamerError::MatcherError => "Could not match name against file",
             RenamerError::NameGeneratorError(_) => "Unable to create the new file name",
-            RenamerError::InvalidFileName => "Invalid file name. Make sure it is is valid unicode",
-            RenamerError::InternalError(_) => "An internal error occured",
+            RenamerError::InvalidFileName => "Invalid file name. Make sure it is valid unicode",
+            RenamerError::InternalError(_) => "An internal error occurred",
         };
 
         write!(f, "{}", message)
